@@ -52,3 +52,11 @@ MesStemHist <- ggplot(mes_dat, aes(x = StemCount))+
        x = "Stem Count",
        y = "Count")+
   theme_minimal()
+
+
+MesDistHist <- ggplot(mes_dat, aes(x = Distance))+
+  geom_histogram(binwidth = 2, fill = "steelblue", color ="black")+
+  labs(title = "Mesquite Distance Histogram",
+       x = "Distance from Tower",
+       y = "Count")+
+  theme_minimal()

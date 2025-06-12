@@ -68,3 +68,10 @@ p3 <- ggplot(BasDi_summary, aes(x = ID, y = mean_di)) +
 
 
 p1+p2+p3
+
+#=====summary table of tree traits----------------------------------------------
+summary <- dat %>%
+  group_by(ID) %>%
+  summarize()
+
+

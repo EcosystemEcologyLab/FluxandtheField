@@ -6,7 +6,7 @@ library(tidyverse)
 library(patchwork)
 
 #===filter to 60m to align with Russ's survey===================================
-census_dat <- read.csv("X:/moore/FieldData/DataSpreadsheets/US-SRG_WoodyPlantCensus_28052025.csv")
+census_dat <- read.csv("Z:/MooreSRER/FieldData/DataSpreadsheets/US-SRG_WoodyPlantCensus_28052025.csv")
 avg_census_dat <- census_dat%>%
   group_by(ID)%>%
   summarize(Species = Species,
@@ -40,7 +40,7 @@ stats <- avg_census_dat %>%
 
 #======Prep Russ's Data from obs values=========================================
 
-russ_data <- read.csv("./Data/SRG_WoodyCover_Oct_2014.csv")
+russ_data <- read.csv("./Data/SRG/SRG_WoodyCover_Oct_2014.csv")
 avg_russ_data <- russ_data%>%
   group_by(CW_from_bearing)%>%
   mutate(Ht..cm. = Ht..cm./100,

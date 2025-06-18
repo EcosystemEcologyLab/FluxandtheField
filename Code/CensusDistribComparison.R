@@ -18,7 +18,7 @@ filt_lindsey_dat <- lindsey_dat%>%
          Distance < 60)%>%
   ungroup()%>%
   select(-ID)%>%
-  mutate(Survey = "Lindsey")%>%
+  mutate(Survey = "2025")%>%
   filter(Species == "MES")
 
 filt_russ_dat <- russ_dat%>%
@@ -30,17 +30,19 @@ filt_russ_dat <- russ_dat%>%
          Distance = Dist..m.,
          Height = Ht..cm.,
          CrownDiameter = Diam..cm.)%>%
-  mutate(Survey = "Russ")%>%
+  mutate(Survey = "2014")%>%
   filter(Species == "MES")
 
 combd_dat <- bind_rows(filt_lindsey_dat, filt_russ_dat)
 
 #---Plot Histograms=============================================================
+combd_dat$Survey <- factor(combd_dat$Survey, levels = c("2025", "2014"))
+
 ggplot(combd_dat, aes(x = Height, fill = Survey)) +
   geom_histogram(position = "identity", alpha = 0.85, bins = 30) +
-  scale_fill_manual(values = c("Russ" = "#91bfdb", "Lindsey" = "#fc8d59")) +
+  scale_fill_manual(values = c("2014" = "#91bfdb", "2025" = "#fc8d59")) +
   theme_minimal() +
-  labs(title = "Mesquite Height Distribution by Survey",
+  labs(title = "Mesquite Height Distribution",
        x = "Height (m)",
        y = "Count",
        fill = "Survey")+
@@ -55,9 +57,9 @@ ggplot(combd_dat, aes(x = Height, fill = Survey)) +
 
 ggplot(combd_dat, aes(x = CrownDiameter, fill = Survey)) +
   geom_histogram(position = "identity", alpha = 0.85, bins = 30) +
-  scale_fill_manual(values = c("Russ" = "#91bfdb", "Lindsey" = "#fc8d59")) +
+  scale_fill_manual(values = c("2014" = "#91bfdb", "2025" = "#fc8d59")) +
   theme_minimal() +
-  labs(title = "Mesquite Crown Diameter Distribution by Survey",
+  labs(title = "Mesquite Crown Diameter Distribution",
        x = "Crown Diameter (m)",
        y = "Count",
        fill = "Survey")+
@@ -78,3 +80,7 @@ wilcox.test(Height ~ Survey, data = combd_dat)
 # ^ means are sig dif
 wilcox.test(CrownDiameter ~ Survey, data = combd_dat)
 # ^ means are sig dif
+
+#---NEE increment===============================================================
+
+fluxdat <- 

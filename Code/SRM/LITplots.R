@@ -69,14 +69,24 @@ ggplot(LIT_allcov, aes(x = factor(Bearing), y = TotalCover, fill = Survey)) +
 BT_Ldat <- LIT_Ldat%>%
   filter(CanopyDiameter != is.na(CanopyDiameter))%>%
   group_by(ID)%>%
-  summarize(Bearing = Bearing,
-            CanDi = mean(CanopyDiameter, na.rm = T))%>%
-  distinct()%>%
-  group_by(Bearing)%>%
-  summarize(TotalCanDi = sum(CanDi, na.rm = T))%>%
-  mutate(Area = pi*((TotalCanDi/2)^2))%>%
-  mutate(PercArea = (Area/120)*100)
+  reframe(Bearing = Bearing,
+          Species = CoverType,
+            BasDi = mean(BasalDiameter, na.rm = T))%>%
+  group_by(Bearing, Species)%>%
+  summarize(TotalBasDi = sum(BasDi, na.rm = T))#%>%
+  mutate(Area = pi*((TotalBasDi/2)^2))%>%
+  mutate(PercArea = (Area/1200000)*100)
 
+BT_Ldat <- LIT_Ldat%>%
+    filter(CanopyDiameter != is.na(CanopyDiameter))%>%
+    group_by(ID)%>%
+    reframe(Bearing = Bearing,
+            #Species = CoverType,
+            CanDi = mean(CanopyDiameter, na.rm = T))%>%
+    group_by(Bearing)%>%
+    summarize(TotalCanDi = sum(CanDi, na.rm = T))#%>%
+  mutate(Area = pi*((TotalBasDi/2)^2))%>%
+    mutate(PercArea = (Area/1200000)*100)
 
   
 BT_Rdat <- LIT_Rdat%>%

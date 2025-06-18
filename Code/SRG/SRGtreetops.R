@@ -6,6 +6,7 @@ library(terra)
 library(ForestTools)
 library(dplyr)
 library(ggplot2)
+library(patchwork)
 
 LidarPath <- "Z:/Drone_Wim/SRERGrass5-28-25/SRERLidar5-28-25/lidars/terra_las/cloud_merged.las"
 
@@ -69,11 +70,11 @@ combd_dat <- bind_rows(filt_lindsey_dat, TreeMeas)
 #----Plot
 #------------------
 combd_dat$Survey <- factor(combd_dat$Survey, levels = c("Ground", "Drone"))
-ggplot(combd_dat, aes(x = Height, fill = Survey)) +
+p1 <- ggplot(combd_dat, aes(x = Height, fill = Survey)) +
   geom_histogram(position = "identity", alpha = 0.85, bins = 30) +
   scale_fill_manual(values = c("Drone" = "#91bfdb", "Ground" = "#fc8d59")) +
   theme_minimal() +
-  labs(title = "Tree Heights",
+  labs(title = "",
        x = "Height (m)",
        y = "Count",
        fill = "Survey")+
@@ -81,38 +82,43 @@ ggplot(combd_dat, aes(x = Height, fill = Survey)) +
     axis.title = element_text(size = 15),
     plot.title = element_text(size = 18),
     axis.text = element_text(size = 13),
-    legend.text = element_text(size = 13),
-    legend.title = element_text(size = 15))
+    legend.position = "none")
 
-ggplot(combd_dat, aes(x = Diameter, fill = Survey)) +
+p2 <- ggplot(combd_dat, aes(x = Diameter, fill = Survey)) +
   geom_histogram(position = "identity", alpha = 0.85, bins = 30) +
   scale_fill_manual(values = c("Drone" = "#91bfdb", "Ground" = "#fc8d59")) +
   theme_minimal() +
-  labs(title = "Tree Canopy Diameters",
+  labs(title = "",
        x = "Canopy Diameter (m)",
        y = "Count",
        fill = "Survey")+
   theme(
-    axis.title = element_text(size = 15),
+    axis.title.x = element_text(size = 15),
+    axis.title.y = element_blank(),
     plot.title = element_text(size = 18),
-    axis.text = element_text(size = 13),
-    legend.text = element_text(size = 13),
-    legend.title = element_text(size = 15))
+    axis.text.x = element_text(size = 13),
+    axis.text.y = element_text(size = 13),
+    legend.position = "none")
 
-ggplot(combd_dat, aes(x = Area, fill = Survey)) +
+p3 <- ggplot(combd_dat, aes(x = Area, fill = Survey)) +
   geom_histogram(position = "identity", alpha = 0.85, bins = 30) +
   scale_fill_manual(values = c("Drone" = "#91bfdb", "Ground" = "#fc8d59")) +
   theme_minimal() +
-  labs(title = "Tree Canopy Areas",
+  labs(title = "",
        x = "Canopy Area (m-2)",
        y = "Count",
        fill = "Survey")+
   theme(
-    axis.title = element_text(size = 15),
+    axis.title.x = element_text(size = 15),
+    axis.title.y = element_blank(),
     plot.title = element_text(size = 18),
-    axis.text = element_text(size = 13),
+    axis.text.x = element_text(size = 13),
+    axis.text.y = element_text(size = 13),
     legend.text = element_text(size = 13),
     legend.title = element_text(size = 15))
+
+p1+p2+p3
+
 
 #stat tests--------------------------------------------------------
 

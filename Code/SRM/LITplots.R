@@ -3,8 +3,8 @@
 library(dplyr)
 library(ggplot2)
 
-LIT_Ldat <- read.csv("X:/moore/FieldData/DataSpreadsheets/US-SRM_Transects_27052025.csv")
-LIT_Rdat <- read.csv("./Data/SRM_Transects(RussDataSRM).csv")
+LIT_Ldat <- read.csv("Z:/MooreSRER/FieldData/DataSpreadsheets/US-SRM_Transects_27052025.csv")
+LIT_Rdat <- read.csv("./Data/SRM/SRM_Transects(RussDataSRM).csv")
 
 #overstory cover----------------------------------------------------------------
 LIT_Lcov <- LIT_Ldat%>%

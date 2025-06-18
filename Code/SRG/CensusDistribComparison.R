@@ -3,8 +3,8 @@
 library(dplyr)
 library(ggplot2)
 
-lindsey_dat <- read.csv("X:/moore/FieldData/DataSpreadsheets/US-SRG_WoodyPlantCensus_28052025.csv")
-russ_dat <- read.csv("./Data/SRG_WoodyCover_Oct_2014.csv")
+lindsey_dat <- read.csv("Z:/MooreSRER/FieldData/DataSpreadsheets/US-SRG_WoodyPlantCensus_28052025.csv")
+russ_dat <- read.csv("./Data/SRG/SRG_WoodyCover_Oct_2014.csv")
 
 #---Prep dataframes=============================================================
 

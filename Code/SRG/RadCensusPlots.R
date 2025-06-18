@@ -3,7 +3,7 @@
 library(dplyr)
 library(ggplot2)
 
-census_dat <- read.csv("X:/moore/FieldData/DataSpreadsheets/US-SRG_WoodyPlantCensus_28052025.csv")
+census_dat <- read.csv("Z:/MooreSRER/FieldData/DataSpreadsheets/US-SRG_WoodyPlantCensus_28052025.csv")
 avg_census_dat <- census_dat%>%
   group_by(ID)%>%
   summarize(Species = Species,

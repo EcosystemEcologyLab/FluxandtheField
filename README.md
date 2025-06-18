@@ -4,15 +4,15 @@
 
 Data span two campaigns:
 
--    **May-June 2025**: flux, field, and remote sensing measurements
+-   **May-June 2025**: flux, field, and remote sensing measurements
 
--    **2014**: historical field and flux data from USDA-ARS campaign
+-   **2014**: historical field and flux data from USDA-ARS campaign
 
 This project contributes to a broader effort to understand how ecosystem structure influences the carbon cycle in semi-arid ecosystems. Specifically, this repository includes code to:
 
 -   Evaluate the effectiveness of **remote sensing versus ground-based methods** for characterizing vegetation structure and biometric distributions at the flux tower sites by comparing observations across a biometric gradient at two flux sites.
 
--    Analyze **ecosystem change over a 10-year period** using flux data and biometric measurements collected in 2014 and 2025.
+-   Analyze **ecosystem change over a 10-year period** using flux data and biometric measurements collected in 2014 and 2025.
 
 ## Repository Structure
 

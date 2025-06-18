@@ -82,5 +82,20 @@ wilcox.test(CrownDiameter ~ Survey, data = combd_dat)
 # ^ means are sig dif
 
 #---NEE increment===============================================================
+#SRG
+fluxdat <- read.csv("./Data/FluxData/AMF_US-SRG_FLUXNET_SUBSET_YY_2008-2023_4-6.csv")%>%
+  select(TIMESTAMP, NEE_VUT_REF)
+ggplot(fluxdat, aes(x = TIMESTAMP, y = NEE_VUT_REF))+
+  geom_point()+
+  theme_minimal()
+#2014 to end of record (2023)
+srgNEE_increment <- fluxdat$NEE_VUT_REF[fluxdat$TIMESTAMP == 2023] - fluxdat$NEE_VUT_REF[fluxdat$TIMESTAMP == 2014]
 
-fluxdat <- 
+#SRM
+fluxdat <- read.csv("./Data/FluxData/AMF_US-SRM_FLUXNET_SUBSET_YY_2004-2023_3-6.csv")%>%
+  select(TIMESTAMP, NEE_VUT_REF)
+ggplot(fluxdat, aes(x = TIMESTAMP, y = NEE_VUT_REF))+
+  geom_point()+
+  theme_minimal()
+#2014 to end of record (2023)
+srmNEE_increment <- fluxdat$NEE_VUT_REF[fluxdat$TIMESTAMP == 2023] - fluxdat$NEE_VUT_REF[fluxdat$TIMESTAMP == 2014]

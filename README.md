@@ -4,7 +4,7 @@
 
 Data span two campaigns:
 
--    **May--June 2025**: flux, field, and remote sensing measurements
+-    **May-June 2025**: flux, field, and remote sensing measurements
 
 -    **2014**: historical field and flux data from USDA-ARS campaign
 

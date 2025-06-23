@@ -24,7 +24,7 @@ This folder contains R scripts for processing and visualizing field, drone, and 
 
 Code specific to comparing drone and ground data at US-SRG and US-SRM flux sites.
 
--   HeightError.R: Visualize height, canopy diameter, and basal diameter of trees for the biometric gradients at US-SRM and US-SRG. Use the multiple observation collected to calculate and visualize the error associated with using the hypsometer in-field to collect height data.
+-   VisualizeBiometGrad.R: Visualize the distributions of height, canopy diameter, and basal diameter of trees for the biometric gradients at US-SRM and US-SRG. Use the multiple observations collected to calculate and visualize measurement error.
 
 -   SRGtreetops.R: Use canopy polygons and canopy height model to extract height and canopy diameter statistics from LiDAR. Compare extracted values with woody census field data from US-SRG.
 

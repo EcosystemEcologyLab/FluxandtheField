@@ -52,6 +52,10 @@ Code specific to comparing 2014 and 2025 field data collected at US-SRM.
 
 -   SRM_CHM.R: Create canopy height model (CHM) for US-SRM from 2025 LiDAR.
 
+### /Data/GitData
+
+Data needed to run code in /Code.
+
 ### /Plots
 
 Plots made from the code in /Code are saved in /Plots.

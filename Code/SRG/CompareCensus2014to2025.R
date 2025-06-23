@@ -1,4 +1,12 @@
-#rad census to 60m
+# At the US-SRG flux tower site, we conducted a woody plant census within a 100m
+# radius of the tower to compare to a similar census from 2014. This script 
+# compares average values by survey quadrant between the two collections. 
+# 
+# This script executes the following steps:
+#   1. Formats 2025 data
+#   2. Formats 2014 data
+#   3. Combines datasets into a single data frame and calculate mean, st.dev
+#   4. Visualizes and compares average measurement values by quadrant
 
 #===============================================================================
 #Load necessary packages--------------------------------------------------------

@@ -1,149 +1,115 @@
-#biomet grad and hypsometer error
+# At the US-SRG and US-SRM flux tower sites, 10 and 16 mesquite trees, 
+# respectively, were selected to represent a range of canopy diameters, basal 
+# diameters, and heights. We refer to these ranges as biometric gradients. 
+# Each tree was tagged and measured for long-term monitoring. A summary of 
+# methods and data can be found in /Reports/Biometric Gradient Notes.
+# 
+# This script performs the following steps for each site:
+#   1. Imports the field measurement data
+#   2. Creates a function to determine averages and errors for measurements
+#   3. Visualizes the distribution of values for each measurement type
 
+#===============================================================================
+#Load necessary packages--------------------------------------------------------
+#===============================================================================
 library(dplyr)
 library(ggplot2)
 library(tidyverse)
 library(patchwork)
-#===============================================================================
-#SRG----------------------------------------------------------------------------
-#===============================================================================
-dat <-  read.csv("X:/moore/FieldData/DataSpreadsheets/US-SRG_BiometGrad_07062025.csv")
-
-height_summary <- dat %>%
-  group_by(ID) %>%
-  summarize(
-    mean_height = mean(CanopyHeight, na.rm = TRUE),
-    se_height = sd(CanopyHeight, na.rm = TRUE) / sqrt(n()))
-
-height_summary <- height_summary %>%
-  mutate(ID = factor(ID, levels = ID[order(mean_height)]))
-
-p1 <- ggplot(height_summary, aes(x = ID, y = mean_height)) +
-  geom_bar(stat = "identity", fill = "steelblue") +
-  geom_errorbar(aes(ymin = mean_height - se_height, ymax = mean_height + se_height),
-                width = 0.2) +
-  labs(x = "Tree ID #", y = "Average Canopy Height (m)",
-       title = "") +
-  theme_minimal()+
-  theme(axis.title.y = element_text(size = 16),
-        axis.title.x = element_blank(),
-        axis.text.x = element_text(size = 13),
-        axis.text.y = element_text(size = 13))
-
-
-
-CanDi_summary <- dat %>%
-  group_by(ID) %>%
-  summarize(
-    mean_di = mean(CanopyDiameter, na.rm = TRUE),
-    se_di = sd(CanopyDiameter, na.rm = TRUE) / sqrt(n()))
-
-CanDi_summary <- CanDi_summary %>%
-  mutate(ID = factor(ID, levels = ID[order(mean_di)]))
-
-p2 <- ggplot(CanDi_summary, aes(x = ID, y = mean_di)) +
-  geom_bar(stat = "identity", fill = "steelblue") +
-  geom_errorbar(aes(ymin = mean_di - se_di, ymax = mean_di + se_di),
-                width = 0.2) +
-  labs(x = "Tree ID #", y = "Average Canopy Diameter (m)",
-       title = "") +
-  theme_minimal()+
-  theme(axis.title = element_text(size = 16),
-        axis.text = element_text(size = 13))
-
-
-BasDi_summary <- dat %>%
-  group_by(ID) %>%
-  summarize(
-    mean_di = mean(BasalDiameter, na.rm = TRUE),
-    se_di = sd(BasalDiameter, na.rm = TRUE) / sqrt(n()))
-
-BasDi_summary <- BasDi_summary %>%
-  mutate(ID = factor(ID, levels = ID[order(mean_di)]))
-
-p3 <- ggplot(BasDi_summary, aes(x = ID, y = mean_di)) +
-  geom_bar(stat = "identity", fill = "steelblue") +
-  geom_errorbar(aes(ymin = mean_di - se_di, ymax = mean_di + se_di),
-                width = 0.2) +
-  labs(x = "Tree ID #", y = "Average Basal Diameter (cm)",
-       title = "") +
-  theme_minimal()+
-  theme(axis.title.y = element_text(size = 16),
-        axis.title.x = element_blank(),
-        axis.text.x = element_text(size = 13),
-        axis.text.y = element_text(size = 13))
-
-p1+p2+p3
 
 #===============================================================================
-#SRM----------------------------------------------------------------------------
+#Import field observations------------------------------------------------------
 #===============================================================================
-dat <- read.csv("X:/moore/FieldData/DataSpreadsheets/US-SRM_BiometGrad_12062025.csv")
+SRGdat <-  read.csv("./Data/GitData/US-SRG_BiometGrad_07062025.csv")
+SRMdat <-  read.csv("./Data/GitData/US-SRM_BiometGrad_12062025.csv")
 
-dendro_ids <- dat %>%
-  group_by(ID) %>%
-  summarize(dendro = mean(DendrometerID, na.rm = TRUE)) %>%
-  filter(!is.na(dendro)) %>%
-  mutate(ID = as.factor(ID), y_pos = -0.2)
+#===============================================================================
+#Define mean/se plotting function-----------------------------------------------
+#===============================================================================
+MeasStats <- function(data, variable, y_label, dendro = FALSE) {
+  
+  #summarize mean and se for a given variable
+  summary_df <- data %>%
+    group_by(ID) %>%
+    summarize(
+      avg = mean(.data[[variable]], na.rm = TRUE),
+      se = sd(.data[[variable]], na.rm = TRUE) / sqrt(n()),
+      .groups = "drop"
+    )
+  
+  #add annotation for trees with dendrometers (US-SRM)
+  dendro_ids <- character(0)
+  if (dendro) {
+    dendro_ids <- data %>%
+      group_by(ID) %>%
+      summarize(has_dendro = any(!is.na(DendrometerID)), .groups = "drop") %>%
+      filter(has_dendro) %>%
+      pull(ID) %>% as.character()
+  }
+  summary_df <- summary_df %>%
+    mutate(
+      ID_char = as.character(ID),
+      ID_label = ifelse(ID_char %in% dendro_ids,
+                        paste0(ID_char, "\n*"),  # newline + asterisk below
+                        ID_char)
+    ) %>%
+    mutate(ID_label = factor(ID_label, levels = ID_label[order(avg)]))
+  
+  
+  #combine plot elements; adjust aesthetics
+  p <- ggplot(summary_df, aes(x = ID_label, y = avg)) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    geom_errorbar(aes(ymin = avg - se, ymax = avg + se), width = 0.2) +
+    labs(x = "Tree ID #", y = y_label, title = "") +
+    theme_minimal() +
+    theme(
+      axis.title.y = element_text(size = 16),
+      axis.title.x = element_text(size = 16, margin = margin(t = 10)),
+      axis.text.x = element_text(size = 13, hjust = 0.5, lineheight = 0.9),
+      axis.text.y = element_text(size = 13)
+    )
+  
+  return(p)
+}
 
-height_summary <- dat %>%
-  group_by(ID) %>%
-  summarize(
-    mean_height = mean(CanopyHeight, na.rm = TRUE),
-    se_height = sd(CanopyHeight, na.rm = TRUE) / sqrt(n())) %>%
-  mutate(ID = factor(ID, levels = ID[order(mean_height)]))
+#===============================================================================
+#SRG plots----------------------------------------------------------------------
+#===============================================================================
 
-p1 <- ggplot(height_summary, aes(x = ID, y = mean_height)) +
-  geom_bar(stat = "identity", fill = "steelblue") +
-  geom_errorbar(aes(ymin = mean_height - se_height, ymax = mean_height + se_height),
-                width = 0.2) +
-  geom_text(data = dendro_ids, aes(x = ID, y = y_pos), 
-            label = "*", size = 6, vjust = 1) +
-  labs(x = "Tree ID #", y = "Average Canopy Height (m)") +
-  theme_minimal() +
-  theme(axis.title.y = element_text(size = 16),
-        axis.title.x = element_blank(),
-        axis.text.x = element_text(size = 13, angle = 45),
-        axis.text.y = element_text(size = 13))
+p1g <- MeasStats(SRGdat, "CanopyHeight", "Average Canopy Height (m)")
+p2g <- MeasStats(SRGdat, "CanopyDiameter", "Average Canopy Diameter (m)")
+p3g <- MeasStats(SRGdat, "BasalDiameter", "Average Basal Diameter (cm)")
 
-CanDi_summary <- dat %>%
-  group_by(ID) %>%
-  summarize(
-    mean_di = mean(CanopyDiameter, na.rm = TRUE),
-    se_di = sd(CanopyDiameter, na.rm = TRUE) / sqrt(n())) %>%
-  mutate(ID = factor(ID, levels = ID[order(mean_di)]))
+# Combine plots
+srg_plot <- p1g + p2g + p3g +
+  plot_layout(ncol = 3) &
+  theme(axis.title.x = element_blank())
 
-p2 <- ggplot(CanDi_summary, aes(x = ID, y = mean_di)) +
-  geom_bar(stat = "identity", fill = "steelblue") +
-  geom_errorbar(aes(ymin = mean_di - se_di, ymax = mean_di + se_di),
-                width = 0.2) +
-  geom_text(data = dendro_ids, aes(x = ID, y = -0.2), 
-            label = "*", size = 6, vjust = 1) +
-  labs(x = "Tree ID #", y = "Average Canopy Diameter (m)") +
-  theme_minimal() +
-  theme(axis.title = element_text(size = 16),
-        axis.text.x = element_text(size = 13, angle = 45),
-        axis.text.y = element_text(size = 13))
+# Add common x-axis label using patchwork's plot_annotation
+srg_plot + plot_annotation(
+  title = "US-SRG Biometric Gradient",
+  caption = "Tree ID #",
+  theme = theme(
+    plot.caption = element_text(size = 16, hjust = 0.5, margin = margin(t = 2))
+  )
+)
 
-BasDi_summary <- dat %>%
-  group_by(ID) %>%
-  summarize(
-    mean_di = mean(BasalDiameter, na.rm = TRUE),
-    se_di = sd(BasalDiameter, na.rm = TRUE) / sqrt(n())) %>%
-  mutate(ID = factor(ID, levels = ID[order(mean_di)]))
+#===============================================================================
+#SRM plots----------------------------------------------------------------------
+#===============================================================================
+p1m <- MeasStats(SRMdat, "CanopyHeight", "Average Canopy Height (m)", dendro = T)
+p2m <- MeasStats(SRMdat, "CanopyDiameter", "Average Canopy Diameter (m)", dendro = T)
+p3m <- MeasStats(SRMdat, "BasalDiameter", "Average Basal Diameter (cm)", dendro = T)
 
-p3 <- ggplot(BasDi_summary, aes(x = ID, y = mean_di)) +
-  geom_bar(stat = "identity", fill = "steelblue") +
-  geom_errorbar(aes(ymin = mean_di - se_di, ymax = mean_di + se_di),
-                width = 0.2) +
-  geom_text(data = dendro_ids, aes(x = ID, y = -0.2), 
-            label = "*", size = 6, vjust = 1) +
-  labs(x = "Tree ID #", y = "Average Basal Diameter (cm)") +
-  theme_minimal() +
-  theme(axis.title.y = element_text(size = 16),
-        axis.title.x = element_blank(),
-        axis.text.x = element_text(size = 13, angle = 45),
-        axis.text.y = element_text(size = 13))
+srm_plot <- p1m + p2m + p3m +
+  plot_layout(ncol = 3) &
+  theme(axis.title.x = element_blank())
 
+srm_plot + plot_annotation(
+  title = "US-SRM Biometric Gradient",
+  caption = "Tree ID #",
+  theme = theme(
+    plot.caption = element_text(size = 16, hjust = 0.5, margin = margin(t = 2))
+  )
+)
 
-p1 + p2 + p3

@@ -32,7 +32,7 @@ Code specific to comparing drone and ground data at US-SRG and US-SRM flux sites
 
 Code specific to comparing 2014 and 2025 field data collected at US-SRG.
 
--   60mObs.R: Filter 2014 and 2025 field data to 60-m, summarize observations, and visualize by quadrant.
+-   CompareCensus2014to2025.R: Filter 2014 and 2025 field data to 60-m, summarize observations, and visualize by quadrant.
 
 -   CensusDistribComparison.R: Visualize mesquite height and canopy diameter distributions. Determine significant differences in distributions. Calculate NEE increment from flux data.
 

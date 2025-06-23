@@ -28,15 +28,21 @@ Code specific to comparing drone and ground data at US-SRG and US-SRM flux sites
 
 -   CompareDroneAndCensusDistribs.R: Use canopy polygons and canopy height model to extract height and canopy diameter statistics from LiDAR. Compare extracted values with woody census field data from US-SRG.
 
+**Flux/**
+
+Code utilitzing flux data.
+
+-   NEEincrement.R: Use monthly long-term flux data at both US-SRM and US-SRG to compare trends in NEE from 2014 to 2023.
+
 **SRG/**
 
 Code specific to comparing 2014 and 2025 field data collected at US-SRG.
 
--   CompareCensus2014to2025.R: Filter 2014 and 2025 field data to 60-m, summarize observations, and visualize by quadrant.
+-   CompareCensusAverages2014to2025.R: Filter 2014 and 2025 field data to 60-m, summarize observations, and visualize by quadrant.
 
--   CensusDistribComparison.R: Visualize mesquite height and canopy diameter distributions. Determine significant differences in distributions. Calculate NEE increment from flux data.
+-   CompareCensusDistribs2014to2025.R: Visualize mesquite height and canopy diameter distributions. Determine significant differences in distributions. Calculate NEE increment from flux data.
 
--   RadCensusPlots.R: Visualize distributions of 2025 woody census field data.
+-   2025CensusDistribs.R: Visualize distributions of 2025 woody census field data (mainly mesquite observations).
 
 **SRM/**
 

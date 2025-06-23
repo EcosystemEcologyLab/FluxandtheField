@@ -1,35 +1,52 @@
-#SRG canopy heights
+# At the US-SRG flux tower site, we did a woody plant census for plants within
+# 100m of the tower and we collected LiDAR with a drone. We compare the 
+# distributions of tree height, canopy diameter, and canopy area between the two
+# data collections. 
+# 
+# This script executes the following steps:
+#   1. Obtains a CHM from the LiDAR collection
+#   2. Masks CHM with outlines of tree canopies to obtain height and diameter
+#   3. Combines ground and drone datasets into a single data frame
+#   4. Visualizes distributions of height, diameter, and area
+#   5. Performs Kolmogorov-Smirnov and Wilcoxon statistical tests
 
-library(lidR)
+#===============================================================================
+#Load necessary packages--------------------------------------------------------
+#===============================================================================
+#library(lidR)
 library(sf)
 library(terra)
-library(ForestTools)
 library(dplyr)
 library(ggplot2)
 library(patchwork)
 
-LidarPath <- "Z:/Drone_Wim/SRERGrass5-28-25/SRERLidar5-28-25/lidars/terra_las/cloud_merged.las"
+#===============================================================================
+#Obtain canopy height model (CHM) from LiDAR------------------------------------
+#===============================================================================
+# LidarPath <- "Z:/Drone_Wim/SRERGrass5-28-25/SRERLidar5-28-25/lidars/terra_las/cloud_merged.las"
+# 
+# las <- readLAS(LidarPath)
+# 
+# if (is.null(las@data$Classification) || !any(las@data$Classification %in% c(2))) {
+#   las <- classify_ground(las, algorithm = csf())
+# }
+# 
+# dtm <- rasterize_terrain(las, res = 0.1, algorithm = knnidw(k = 10, p = 2))
+# dsm <- rasterize_canopy(las, res = 0.1, algorithm = p2r(subcircle = 0.15))
+# chm <- dsm - dtm
+# 
+# #saveRDS(chm, "./Data/SRGchm.RDS")
 
-las <- readLAS(LidarPath)
-
-if (is.null(las@data$Classification) || !any(las@data$Classification %in% c(2))) {
-  las <- classify_ground(las, algorithm = csf())
-}
-dtm <- rasterize_terrain(las, res = 0.1, algorithm = knnidw(k = 10, p = 2))
-
-dsm <- rasterize_canopy(las, res = 0.1, algorithm = p2r(subcircle = 0.15))
-
-chm <- dsm - dtm
-writeRaster(chm_zoom, "./Data/SRGchmzoomed.tif")
-#saveRDS(chm, "./Data/SRGchm.RDS")
+#===============================================================================
+#Create a dataframe with field and drone observations----------------------------
+#===============================================================================
+chm <- readRDS("./Data/GitData/SRGchm.RDS")
 chm[chm < 0 | chm > 20] <- NA
 
-
-#Use manually traced polygons to calc canopy stats
-
-sfpath <- "./QGIS/canopypolys.shp"
+#use manually traced polygons to calc canopy stats
+sfpath <- "./Data/GitData/canopypolys.shp"
 canpol <- vect(sfpath)
-plot(canpol)
+#plot(canpol)
 
 chm_crop <- crop(chm, canpol)
 chm_masked <- mask(chm_crop, canpol)
@@ -49,11 +66,14 @@ TreeMeas <- data.frame(
 )%>%
   select(-ID)
 
+#===============================================================================
+#Combine drone and ground datasets----------------------------------------------
+#===============================================================================
 #combine with ground data:
-lindsey_dat <- read.csv("X:/moore/FieldData/DataSpreadsheets/US-SRG_WoodyPlantCensus_28052025.csv")
+lindsey_dat <- read.csv("./Data/GitData/US-SRG_WoodyPlantCensus_28052025.csv")
 filt_lindsey_dat <- lindsey_dat%>%
   group_by(ID)%>%
-  summarize(Species = Species,
+  reframe(Species = Species,
             Diameter = mean(CrownDiameter, na.rm = T),
             Height = Height)%>%
   filter(Species != "",)%>%
@@ -66,9 +86,9 @@ filt_lindsey_dat <- lindsey_dat%>%
 
 combd_dat <- bind_rows(filt_lindsey_dat, TreeMeas)
 
-#------------------
-#----Plot
-#------------------
+#===============================================================================
+#Visualize distributions--------------------------------------------------------
+#===============================================================================
 combd_dat$Survey <- factor(combd_dat$Survey, levels = c("Ground", "Drone"))
 p1 <- ggplot(combd_dat, aes(x = Height, fill = Survey)) +
   geom_histogram(position = "identity", alpha = 0.85, bins = 30) +
@@ -119,8 +139,9 @@ p3 <- ggplot(combd_dat, aes(x = Area, fill = Survey)) +
 
 p1+p2+p3
 
-
-#stat tests--------------------------------------------------------
+#===============================================================================
+#Statistically compare distributions -------------------------------------------
+#===============================================================================
 
 ks.test(filt_lindsey_dat$Height, TreeMeas$Height)
 # ^ distribs are sig dif
@@ -135,51 +156,3 @@ wilcox.test(Diameter ~ Survey, data = combd_dat)
 # ^ medians are sig dif
 wilcox.test(Area ~ Survey, data = combd_dat)
 # ^ medians are sig dif
-
-#===============================================================================
-#====Exploring other options...=================================================
-#===============================================================================
-
-
-chm <- aggregate(chm, 5, "mean")
-plot(chm)
-
-kernel <- matrix(1, 3, 3)
-chm_smoothed <- focal(chm, w = kernel, fun = median, na.rm = TRUE)
-
-col <- height.colors(50)
-plot(chm_smoothed, col = col, main = "Smoothed CHM")
-
-
-ext <- ext(chm_smoothed)
-center_x <- 516311.8
-center_y <- 3517106
-
-zoom_width <- 120
-zoom_height <- 120
-zoom_extent <- ext(
-  center_x - zoom_width,
-  center_x + zoom_width,
-  center_y - zoom_height,
-  center_y + zoom_height
-)
-
-chm_zoom <- crop(chm_smoothed, zoom_extent)
-plot(chm_zoom, main = "", axes = F)
-
-
-ttops <- locate_trees(las = chm_zoom, algorithm = lmf(ws = 3.5))
-ttops
-plot(chm_zoom, axes = F)
-plot(ttops, col = "white", add = TRUE, cex = 0.5)
-
-#dynamic window function (function of chm cell size)
-lin <- function(x){x * 0.2 + 5}
-ttops <- vwf(chm_zoom, winFun = lin, minHeight = 0.5)
-plot(chm_zoom, axes = F)
-plot(ttops, col = "white", add = TRUE, cex = 0.5)
-
-crowns_ras <- mcws(treetops = ttops, CHM = chm_zoom, minHeight = 0.5)
-plot(crowns_ras, col = sample(rainbow(50), nrow(unique(chm)), replace = TRUE), legend = FALSE, xlab = "", ylab = "", xaxt='n', yaxt = 'n')
-
-

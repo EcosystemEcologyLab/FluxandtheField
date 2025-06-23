@@ -1,12 +1,36 @@
-#SRM line intercept transects
 
+#===============================================================================
+
+
+####script buggy- math/syntax needs to be fixed!!!###
+
+
+#===============================================================================
+
+# At the US-SRM flux tower site, we conducted line-intercept and belt transects 
+# in eight directions (cardinal and subcardinal) to compare cover and density 
+# estimates to a similar survey from 2014. 
+# 
+# This script executes the following steps:
+#   1. Import field data
+#   2. Format and visualize differences in line-intercept data
+#   3. Format and visualize differences in belt transect data
+
+#===============================================================================
+#Load necessary packages--------------------------------------------------------
+#===============================================================================
 library(dplyr)
 library(ggplot2)
 
-LIT_Ldat <- read.csv("Z:/MooreSRER/FieldData/DataSpreadsheets/US-SRM_Transects_27052025.csv")
-LIT_Rdat <- read.csv("./Data/SRM/SRM_Transects(RussDataSRM).csv")
+#===============================================================================
+#Import field data--------------------------------------------------------------
+#===============================================================================
+LIT_Ldat <- read.csv("./Data/GitData/US-SRM_Transects_27052025.csv")
+LIT_Rdat <- read.csv("./Data/GitData/SRM_Transects(RussDataSRM).csv")
 
-#overstory cover----------------------------------------------------------------
+#===============================================================================
+#Compare line-intercept transect observations-----------------------------------
+#===============================================================================
 LIT_Lcov <- LIT_Ldat%>%
   filter(CoverType != "GRA",
          Start != is.na(Start))%>%
@@ -64,8 +88,8 @@ ggplot(LIT_allcov, aes(x = factor(Bearing), y = TotalCover, fill = Survey)) +
   )
 
 #===============================================================================
-#Belt transect canopy cover comparison 
-
+#Compare belt transect observations---------------------------------------------
+#===============================================================================
 BT_Ldat <- LIT_Ldat%>%
   filter(CanopyDiameter != is.na(CanopyDiameter))%>%
   group_by(ID)%>%

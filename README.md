@@ -48,10 +48,16 @@ Code specific to comparing 2014 and 2025 field data collected at US-SRG.
 
 Code specific to comparing 2014 and 2025 field data collected at US-SRM.
 
--   LITplots.R: process and visualize line intersect transects (LIT) and belt transects from 2014 and 2025.
+-   CompareSRMTransects2014to2025.R: Process and visualize line intersect transects (LIT) and belt transects from 2014 and 2025.
 
--   SRM_CHM.R: create canopy height model (CHM) for US-SRM from 2025 LiDAR.
+-   SRM_CHM.R: Create canopy height model (CHM) for US-SRM from 2025 LiDAR.
 
 ### /Plots
 
 Plots made from the code in /Code are saved in /Plots.
+
+### /Reports
+
+This folder contains summaries of work done collecting and analyzing data.
+
+-   Biometric Gradient Notes.pdf: Summarizes methods used to establish a biometric gradient at both US-SRG and US-SRM. Includes a table of average measurements and coordinates of the mesquite individuals chosen and figures of the ranges of heights, canopy diameters, and basal diameters included in the gradients.

@@ -1,12 +1,26 @@
-#histogram of height canopy di and basal di
+# At the US-SRG flux tower site, we conducted a woody plant census within a 100m
+# radius of the tower. This script visualizes 2025 mesquite census data as 
+# histograms of height, canopy diameter, basal diameter, stem count, and
+# distance from the tower.
+# 
+# This script executes the following steps:
+#   1. Formats 2025 data
+#   2. Visualizes distributions of mesquite census observations with histograms
 
+#===============================================================================
+#Load necessary packages--------------------------------------------------------
+#===============================================================================
 library(dplyr)
 library(ggplot2)
+library(patchwork)
 
-census_dat <- read.csv("Z:/MooreSRER/FieldData/DataSpreadsheets/US-SRG_WoodyPlantCensus_28052025.csv")
+#===============================================================================
+#Format 2025 data---------------------------------------------------------------
+#===============================================================================
+census_dat <- read.csv("./Data/GitData/US-SRG_WoodyPlantCensus_28052025.csv")
 avg_census_dat <- census_dat%>%
   group_by(ID)%>%
-  summarize(Species = Species,
+  reframe(Species = Species,
             Distance = Distance,
             BasalDiameter = mean(BasalDiameter, na.rm = T),
             CrownDiameter = mean(CrownDiameter, na.rm = T),
@@ -14,17 +28,19 @@ avg_census_dat <- census_dat%>%
             StemCount = StemCount)%>%
   filter(Species != "")
 
+mes_dat <- avg_census_dat%>%
+  filter(Species == "MES")
+
+#===============================================================================
+#Create histograms--------------------------------------------------------------
+#===============================================================================
 HeightHist <- ggplot(avg_census_dat, aes(x = Height))+
   geom_histogram(binwidth = 0.5, fill = "steelblue", color ="black")+
-  labs(title = "Height Histogram for All Overstory",
+  labs(title = "Height- All Overstory",
        x = "Height (m)",
        y = "Count")+
   theme_minimal()
 
-
-mes_dat <- avg_census_dat%>%
-  filter(Species == "MES")
-  
 MesHeightHist <- ggplot(mes_dat, aes(x = Height))+
   geom_histogram(binwidth = 0.5, fill = "steelblue", color ="black")+
   labs(title = "Mesquite Height Histogram",
@@ -53,10 +69,11 @@ MesStemHist <- ggplot(mes_dat, aes(x = StemCount))+
        y = "Count")+
   theme_minimal()
 
-
 MesDistHist <- ggplot(mes_dat, aes(x = Distance))+
   geom_histogram(binwidth = 2, fill = "steelblue", color ="black")+
   labs(title = "Mesquite Distance Histogram",
        x = "Distance from Tower",
        y = "Count")+
   theme_minimal()
+
+(MesHeightHist + MesCanDiHist)/ (MesBasDiHist + MesStemHist) / MesDistHist

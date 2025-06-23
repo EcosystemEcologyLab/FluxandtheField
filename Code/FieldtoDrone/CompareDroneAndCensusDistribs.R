@@ -1,5 +1,5 @@
-# At the US-SRG flux tower site, we did a woody plant census for plants within
-# 100m of the tower and we collected LiDAR with a drone. We compare the 
+# At the US-SRG flux tower site, we conducted a woody plant census within a 100m
+# radius of the tower and collected LiDAR with a drone. This script compares the 
 # distributions of tree height, canopy diameter, and canopy area between the two
 # data collections. 
 # 

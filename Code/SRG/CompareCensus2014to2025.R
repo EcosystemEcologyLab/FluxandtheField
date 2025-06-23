@@ -1,15 +1,20 @@
 #rad census to 60m
 
+#===============================================================================
+#Load necessary packages--------------------------------------------------------
+#===============================================================================
 library(dplyr)
 library(ggplot2)
 library(tidyverse)
 library(patchwork)
 
-#===filter to 60m to align with Russ's survey===================================
-census_dat <- read.csv("Z:/MooreSRER/FieldData/DataSpreadsheets/US-SRG_WoodyPlantCensus_28052025.csv")
+#===============================================================================
+#Format 2025 data---------------------------------------------------------------
+#===============================================================================
+census_dat <- read.csv("./Data/GitData/US-SRG_WoodyPlantCensus_28052025.csv")
 avg_census_dat <- census_dat%>%
   group_by(ID)%>%
-  summarize(Species = Species,
+  reframe(Species = Species,
             Quadrant = Quadrant,
             Distance = Distance,
             BasalDiameter = mean(BasalDiameter, na.rm = T),
@@ -20,8 +25,6 @@ avg_census_dat <- census_dat%>%
   mutate(Area = pi*((CrownDiameter/2)^2))%>%
   arrange(Quadrant, Species)
 
-#write.csv(avg_census_dat, "./60mObs.csv")
-#===calc same stats as Russ=====================================================
 stats <- avg_census_dat %>%
   group_by(Quadrant, Species) %>%
   summarise(
@@ -38,9 +41,10 @@ stats <- avg_census_dat %>%
   ) %>%
   mutate(across(where(is.numeric), ~ round(.x, 2)))
 
-#======Prep Russ's Data from obs values=========================================
-
-russ_data <- read.csv("./Data/SRG/SRG_WoodyCover_Oct_2014.csv")
+#===============================================================================
+#Format 2014 data---------------------------------------------------------------
+#===============================================================================
+russ_data <- read.csv("./Data/GitData/SRG_WoodyCover_Oct_2014.csv")
 avg_russ_data <- russ_data%>%
   group_by(CW_from_bearing)%>%
   mutate(Ht..cm. = Ht..cm./100,
@@ -80,53 +84,53 @@ russ_stats <- russ_stats %>%
     Quadrant == 270 ~ "NW",
     TRUE            ~ as.character(Quadrant)))
 
-#===merge and compare dataframes================================================
+#===============================================================================
+#Combine dataframes and calc stats----------------------------------------------
+#===============================================================================
 russ_stats <- russ_stats %>%
-  mutate(Source = "Russ")
-
+  mutate(Survey = "2014")
 stats <- stats %>%
-  mutate(Source = "Lindsey")
+  mutate(Survey = "2025")
+
 combined_stats <- bind_rows(russ_stats, stats)%>%
   filter(Species == "MES")
 
-#===plot========================================================================
-ggplot(combined_stats, aes(x = Species, y = MeanHeight, fill = Source)) +
-  geom_bar(stat = "identity", position = position_dodge(width = 0.9)) +
-  geom_errorbar(aes(ymin = MeanHeight - SdHeight, ymax = MeanHeight + SdHeight),
-                position = position_dodge(width = 0.9), width = 0.2) +
-  facet_wrap(~ Quadrant) +
-  labs(title = "Mesquite: Mean Height",
-       y = "Mean Height (m)",
-       x = "Species") +
-  theme_minimal() +
-  scale_fill_manual(values = c("Russ" = "steelblue", "Lindsey" = "orange")) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-
-
-#===plot measurements with mean and sd------------------------------------------
+#Variables with sd: 
 mean_vars <- c("MeanHeight", "MeanCanDi", "MeanArea")
 sd_vars   <- c("SdHeight",   "SdCanDi",   "SdArea")
 
 mean_df <- combined_stats %>%
-  select(Quadrant, Source, all_of(mean_vars)) %>%
+  select(Quadrant, Survey, all_of(mean_vars)) %>%
   pivot_longer(cols = all_of(mean_vars), names_to = "Variable", values_to = "Mean")
 
 sd_df <- combined_stats %>%
-  select(Quadrant, Source, all_of(sd_vars)) %>%
+  select(Quadrant, Survey, all_of(sd_vars)) %>%
   pivot_longer(cols = all_of(sd_vars), names_to = "Variable", values_to = "SD") %>%
   mutate(Variable = str_replace(Variable, "Sd", "Mean"))
 
-stats_long <- left_join(mean_df, sd_df, by = c("Quadrant", "Source", "Variable"))
+stats_long <- left_join(mean_df, sd_df, by = c("Quadrant", "Survey", "Variable"))
 
-p1 <- ggplot(stats_long, aes(x = Quadrant, y = Mean, fill = Source)) +
+
+#Variables without sd: 
+extra_vars <- c("Plants", "PercentCover", "Density")
+
+extra_long <- combined_stats %>%
+  select(Quadrant, Survey, all_of(extra_vars)) %>%
+  pivot_longer(cols = all_of(extra_vars), names_to = "Variable", values_to = "Value")
+
+#===============================================================================
+#Plot measurements with/without mean and sd-------------------------------------
+#===============================================================================
+#Vars w/ mean and sd
+p1 <- ggplot(stats_long, aes(x = Quadrant, y = Mean, fill = Survey)) +
   geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
   geom_errorbar(aes(ymin = Mean - SD, ymax = Mean + SD),
                 position = position_dodge(width = 0.8), width = 0.2) +
   facet_wrap(~ Variable, scales = "free_y", nrow = 1) +
-  scale_fill_manual(values = c("Russ" = "#91bfdb", "Lindsey" = "#fc8d59")) +
+  scale_fill_manual(values = c("2014" = "#91bfdb", "2025" = "#fc8d59")) +
   labs(
-    title = "Mesquite",
+    title = "Comparison of Mesquite Observations",
     x = "",
     y = "Meters",
     fill = "Survey"
@@ -137,22 +141,17 @@ p1 <- ggplot(stats_long, aes(x = Quadrant, y = Mean, fill = Source)) +
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-#===Vars w/o mean and sd--------------------------------------------------------
-extra_vars <- c("Plants", "PercentCover", "Density")
 
-extra_long <- combined_stats %>%
-  select(Quadrant, Source, all_of(extra_vars)) %>%
-  pivot_longer(cols = all_of(extra_vars), names_to = "Variable", values_to = "Value")
-
-p2 <- ggplot(extra_long, aes(x = Quadrant, y = Value, fill = Source)) +
+#Vars w/o mean and sd
+p2 <- ggplot(extra_long, aes(x = Quadrant, y = Value, fill = Survey)) +
   geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
   facet_wrap(~ Variable, scales = "free_y", nrow = 1) +
-  scale_fill_manual(values = c("Russ" = "#91bfdb", "Lindsey" = "#fc8d59")) +
+  scale_fill_manual(values = c("2014" = "#91bfdb", "2025" = "#fc8d59")) +
   labs(
     title = "",
     x = "Quadrant",
     y = "Value",
-    fill = "Source"
+    fill = "Survey"
   ) +
   theme_minimal() +
   theme(

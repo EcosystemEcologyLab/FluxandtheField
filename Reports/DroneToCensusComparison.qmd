@@ -1,0 +1,191 @@
+---
+title: "Comparison of Drone and Ground Data at US-SRG"
+author: "Lindsey Bell"
+format: html
+editor: visual
+echo: false
+message: false
+warning: false
+---
+
+## Field Summary
+
+In late May and early June, we conducted a census of all woody plants within a 100-meter radius of the US-SRG flux tower in southeastern Arizona. For each individual, we recorded height, canopy diameter, and distance from the tower. During this time, we also collected high-resolution imagery, multispectral data, and LiDAR using drones. This report summarizes the distributions of characteristics obtained from both ground-based and drone-based observations.
+
+## Comparing Distributions
+
+We compared height, canopy diameter, and canopy area between the two survey methods. To ensure consistency, small shrubs such as honeysuckle and cacti were excluded from both datasets for this comparison. In the drone survey, canopies were manually delineated within a 100-meter radius of the flux tower, excluding a fenced area to the northeast that was also omitted from the ground-based survey. Canopy heights were derived from a LiDAR-based canopy height model. Canopy diameters and areas were calculated from the dimensions of the canopy polygons.
+
+```{r}
+#| fig-width: 15
+#| fig-height: 8
+
+library(here)
+library(sf)
+library(terra)
+library(viridis)
+setwd(here::here())
+
+chm <- readRDS("./Data/GitData/SRGchm.RDS")
+chm[chm < 0 | chm > 20] <- 0
+
+sfpath <- "./Data/GitData/canopypolys.shp"
+canpol <- vect(sfpath)
+chm_crop <- crop(chm, canpol)
+
+#plotting----------------------
+
+layout(matrix(c(1, 2), nrow = 1), widths = c(1, 1))
+
+par(mar = c(2, 2, 3, 1))
+plot(chm_crop,
+     col = viridis(100),
+     main = "Canopy Height Model (CHM)",
+     axes = F,
+     legend = F,
+     cex.main = 3)
+
+par(mar = c(2, 2, 3, 1))
+plot(chm_crop,
+     col = viridis(100),
+     main = "Canopy Polygons on CHM",
+     axes = F,
+     legend = F,
+     cex.main = 3)
+plot(canpol, add = T, border = "red", lwd = 1.5)
+
+
+```
+
+The distributions for all three variables differ significantly in shape and median value, with the exception of height, where the median values are not significantly different.
+
+```{r}
+#| fig-width: 9
+#| fig-height: 7
+#===============================================================================
+#Load necessary packages--------------------------------------------------------
+#===============================================================================
+#library(lidR)
+library(here)
+library(sf)
+library(terra)
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+
+setwd(here::here())
+
+#===============================================================================
+#Create a dataframe with field and drone observations---------------------------
+#===============================================================================
+chm <- readRDS("./Data/GitData/SRGchm.RDS")
+chm[chm < 0 | chm > 20] <- NA
+
+#use manually traced polygons to calc canopy stats
+sfpath <- "./Data/GitData/canopypolys.shp"
+canpol <- vect(sfpath)
+#plot(canpol)
+
+chm_crop <- crop(chm, canpol)
+chm_masked <- mask(chm_crop, canpol)
+
+max_height <- extract(chm_masked, canpol, fun = max, na.rm = T)
+names(max_height)[2] <- "Height"
+
+areas <- expanse(canpol, unit = "m")
+diameters <- 2 * sqrt((areas / pi))
+
+TreeMeas <- data.frame(
+  ID = canpol$id,
+  Height = max_height$Height,
+  Area = areas,
+  Diameter = diameters,
+  Survey = "Drone"
+)%>%
+  select(-ID)
+
+#===============================================================================
+#Combine drone and ground datasets----------------------------------------------
+#===============================================================================
+#combine with ground data:
+lindsey_dat <- read.csv("./Data/GitData/US-SRG_WoodyPlantCensus_28052025.csv")
+filt_lindsey_dat <- lindsey_dat%>%
+  group_by(ID)%>%
+  reframe(Species = Species,
+            Diameter = mean(CrownDiameter, na.rm = T),
+            Height = Height)%>%
+  filter(Species != "")%>%
+  ungroup()%>%
+  select(-ID)%>%
+  mutate(Survey = "Ground",
+         Area = pi*((Diameter/2)^2))%>%
+  filter(Species %in% c("MES", "HAC", "CHAC", "GTN", "WTA", "SALIX", "ACIA", "WAC"))%>%
+  select(-Species)
+
+combd_dat <- bind_rows(filt_lindsey_dat, TreeMeas)
+
+#===============================================================================
+#Visualize distributions--------------------------------------------------------
+#===============================================================================
+combd_dat$Survey <- factor(combd_dat$Survey, levels = c("Ground", "Drone"))
+p1 <- ggplot(combd_dat, aes(x = Height, fill = Survey)) +
+  geom_histogram(position = "identity", alpha = 0.85, bins = 30) +
+  scale_fill_manual(values = c("Drone" = "#91bfdb", "Ground" = "#fc8d59")) +
+  theme_minimal() +
+  labs(title = "",
+       x = "Height (m)",
+       y = "Count",
+       fill = "Survey")+
+  theme(
+    axis.title = element_text(size = 17),
+    plot.title = element_text(size = 20),
+    axis.text = element_text(size = 15),
+    legend.position = "none")
+
+p2 <- ggplot(combd_dat, aes(x = Diameter, fill = Survey)) +
+  geom_histogram(position = "identity", alpha = 0.85, bins = 30) +
+  scale_fill_manual(values = c("Drone" = "#91bfdb", "Ground" = "#fc8d59")) +
+  theme_minimal() +
+  labs(title = "",
+       x = "Canopy Diameter (m)",
+       y = "Count",
+       fill = "Survey")+
+  theme(
+    axis.title.x = element_text(size = 17),
+    axis.title.y = element_blank(),
+    axis.title = element_text(size = 17),
+    plot.title = element_text(size = 20),
+    axis.text = element_text(size = 15),
+    legend.position = "none")
+
+p3 <- ggplot(combd_dat, aes(x = Area, fill = Survey)) +
+  geom_histogram(position = "identity", alpha = 0.85, bins = 30) +
+  scale_fill_manual(values = c("Drone" = "#91bfdb", "Ground" = "#fc8d59")) +
+  theme_minimal() +
+  labs(title = "",
+       x = "Canopy Area (m-2)",
+       y = "Count",
+       fill = "Survey")+
+  theme(
+    axis.title.x = element_text(size = 17),
+    axis.title.y = element_blank(),
+    plot.title = element_text(size = 20),
+    axis.text.x = element_text(size = 15),
+    axis.text.y = element_text(size = 15),
+    legend.text = element_text(size = 15),
+    legend.title = element_text(size = 17))
+
+p1+p2+p3
+```
+
+The drone-based overstory characterization is less likely to capture
+
+-   individuals with overlapping canopies (i.e., a canopy growing into another canopy)
+
+-   individuals with stacked canopies (i.e., a tree growing under another tree)
+
+-   very small individuals (\<1.5-m)
+
+And may be more likely to capture dead standing trees, especially pre-monsoon/before green-up.
+
+As a result, drone-derived canopy diameters and areas tend to be skewed toward larger values, while the field data captures a broader range of smaller individuals. This is also reflected in sample size, as the drone survey identified about 400 individuals, while the field survey documented closer to 600.

@@ -65,4 +65,4 @@ Plots made from the code in /Code are saved in /Plots.
 This folder contains summaries of work done collecting and analyzing data.
 
 -   Biometric Gradient Notes.pdf: Summarizes methods used to establish a biometric gradient at both US-SRG and US-SRM. Includes a table of average measurements and coordinates of the mesquite individuals chosen and figures of the ranges of heights, canopy diameters, and basal diameters included in the gradients.
--   DroneToCensusComparison: Summarizes methods used to compare drone and ground collected data on woody individuals within 100-m of the US-SRG flux tower. Includes figures of height, canopy diameter, and cannopy area distributions, as well as a visual of canopy outlines.  
+-   DroneToCensusComparison: Summarizes methods used to compare drone and ground collected data on woody individuals within 100-m of the US-SRG flux tower. Includes figures of height, canopy diameter, and cannopy area distributions, as well as a visual of canopy outlines.

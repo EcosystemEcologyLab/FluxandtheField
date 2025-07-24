@@ -13,7 +13,7 @@
 #===============================================================================
 #Load necessary packages--------------------------------------------------------
 #===============================================================================
-#library(lidR)
+library(lidR)
 library(sf)
 library(terra)
 library(dplyr)
@@ -31,11 +31,13 @@ library(patchwork)
 #   las <- classify_ground(las, algorithm = csf())
 # }
 # 
-# dtm <- rasterize_terrain(las, res = 0.1, algorithm = knnidw(k = 10, p = 2))
-# dsm <- rasterize_canopy(las, res = 0.1, algorithm = p2r(subcircle = 0.15))
+# dtm <- rasterize_terrain(las, res = 0.5, algorithm = knnidw(k = 10, p = 2))
+# dsm <- rasterize_canopy(las, res = 0.5, algorithm = p2r(subcircle = 0.15))
 # chm <- dsm - dtm
+# chm[chm < 0 | chm > 20] <- NA
 # 
-# #saveRDS(chm, "./Data/SRGchm.RDS")
+# plot(chm)
+# writeRaster(chm, "./Data/0.5mSRGchm.tif", overwrite = T)
 
 #===============================================================================
 #Create a dataframe with field and drone observations----------------------------

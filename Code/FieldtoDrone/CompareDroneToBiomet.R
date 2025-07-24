@@ -19,7 +19,6 @@ library(sf)
 library(ggplot2)
 library(tidyverse)
 library(patchwork)
-
 #===============================================================================
 #Format field observations------------------------------------------------------
 #===============================================================================
@@ -75,43 +74,112 @@ SRMstat <- merge(SRMdat, coords_utm, by = c("ID", "Site"))%>%
 #===============================================================================
 #Format remote observations-----------------------------------------------------
 #===============================================================================
-
-canpols <- vect("./Data/GitData/canopypolys.shp")
-
 SRGchm <- readRDS("./Data/GitData/SRGchm.RDS")
 SRGchm[SRGchm < 0 | SRGchm > 20] <- NA
 
-SRMchm <- rast("./Data/GitData/SRMchmRast.tif")
-
-#overlap biomet points with canpols
-SRGcoords <- coords_utm%>%
-  filter(Site == "US-SRG")%>%
-  select(-Site)
-
-write.csv(SRGcoords, "./QGIS/SRGcoords.csv")
-
-srgpoints <- vect(SRGcoords, geom = c("Easting", "Northing"), crs = "EPSG:32612")
-srg_biomet_polys <- extract(canpols, srgpoints)
+# Load canopy polygons and corrected tree point locations
+canpols <- vect("./Data/GitData/canopypolys.shp")
+corrected_coords <- vect("./QGIS/SRGCorrectedTreePoints.shp")
+corrected_coords_utm <- project(corrected_coords, crs(canpols))
 
 
+r <- rast(canpols, resolution=0.1)
+if (!("polyID" %in% names(canpols))) {
+  canpols$polyID <- 1:length(canpols)
+}
+r_poly <- rasterize(canpols, r, field="polyID")
 
-#generate stats
-max_height <- extract(chm_masked, canpol, fun = max, na.rm = T)
+extracted_polys <- terra::extract(r_poly, corrected_coords_utm)
+ids <- unique(extracted_polys[,2]) 
+SRGbiomet_polys <- canpols[canpols$polyID %in% ids, ]
+
+max_height <- terra::extract(SRGchm, SRGbiomet_polys, fun = max, na.rm = TRUE)
 names(max_height)[2] <- "Height"
+areas <- expanse(SRGbiomet_polys, unit = "m")
+diameters <- 2 * sqrt(areas / pi)
 
-areas <- expanse(canpol, unit = "m")
-diameters <- 2 * sqrt((areas / pi))
+poly_attr <- data.frame(
+  polyID = SRGbiomet_polys$polyID,
+  Height_Drone = max_height$Height,
+  Area_Drone = areas,
+  Diameter_Drone = diameters
+)
+extracted_polys <- terra::extract(r_poly, corrected_coords_utm)
+colnames(extracted_polys) <- c("point_row", "polyID")
+points_df <- data.frame(
+  point_row = 1:length(corrected_coords_utm),
+  pointID = corrected_coords_utm$id  # replace 'id' with actual point ID field name
+)
 
-TreeMeas <- data.frame(
-  ID = canpol$id,
-  Height = max_height$Height,
-  Area = areas,
-  Diameter = diameters,
-  Survey = "Drone"
-)%>%
-  select(-ID)
+TreeMeas <- extracted_polys %>%
+  left_join(points_df, by = "point_row") %>%
+  left_join(poly_attr, by = "polyID") %>%
+  select(ID = pointID, Height_Drone, Area_Drone, Diameter_Drone) %>%
+  mutate(Survey = "Drone")
 
-#mask chm with canpols 
 
-#calc stats
+comp_df_srg <- merge(TreeMeas, SRGstat, by = "ID")%>%
+  select(ID, Height_Drone, Area_Drone, Diameter_Drone, AvgHeight, AvgCanDi, AvgArea)
+
+#===============================================================================
+#Plotting-----------------------------------------------------------------------
+#===============================================================================
+height_long <- comp_df_srg %>%
+  select(ID, Drone = Height_Drone, Ground = AvgHeight) %>%
+  pivot_longer(cols = c(Drone, Ground),
+               names_to = "Source", values_to = "Value") %>%
+  mutate(Trait = "Height")
+
+diameter_long <- comp_df_srg %>%
+  select(ID, Drone = Diameter_Drone, Ground = AvgCanDi) %>%
+  pivot_longer(cols = c(Drone, Ground),
+               names_to = "Source", values_to = "Value") %>%
+  mutate(Trait = "Canopy Diameter")
+
+area_long <- comp_df_srg %>%
+  select(ID, Drone = Area_Drone, Ground = AvgArea) %>%
+  pivot_longer(cols = c(Drone, Ground),
+               names_to = "Source", values_to = "Value") %>%
+  mutate(Trait = "Canopy Area")
+
+plot_data <- bind_rows(height_long, diameter_long, area_long)
+
+ggplot(plot_data, aes(x = factor(ID), y = Value, fill = Source)) +
+  geom_col(position = position_dodge(), alpha = 0.8) +
+  facet_wrap(~ Trait, scales = "free_y") +
+  labs(title = "",
+       x = "Tree ID", y = NULL) +
+  scale_fill_manual(values = c("Drone" = "#91bfdb", "Ground" = "#fc8d59")) +
+  theme_minimal() +
+  theme(strip.text = element_text(size = 12, face = "bold"))
+
+#===============================================================================
+#residuals
+resids_df <- comp_df_srg %>%
+  filter(ID %in% 1:10) %>%                 # keep your ID filter if needed
+  transmute(
+    ID,
+    Height   = Height_Drone   - AvgHeight,
+    Diameter = Diameter_Drone - AvgCanDi,
+    Area     = Area_Drone     - AvgArea
+  )
+
+resids_long <- resids_df %>%
+  pivot_longer(-ID, names_to = "Trait", values_to = "Residual")
+
+resids_hd <- resids_long %>% 
+  filter(Trait %in% c("Height", "Diameter"))
+
+ylim <- max(abs(resids_hd$Residual))
+
+ggplot(resids_hd,
+       aes(x = factor(ID), y = Residual, fill = Trait)) +
+  geom_col() +
+  facet_wrap(~ Trait) +                     # two facets
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  scale_y_continuous(limits = c(-ylim, ylim)) +
+  scale_fill_manual(values = rep("steelblue", 2), guide = "none") +
+  labs(x = "Tree ID", y = "Residual (Drone - Ground)") +
+  theme_minimal()
+
 

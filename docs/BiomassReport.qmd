@@ -6,15 +6,16 @@ editor: visual
 echo: false
 message: false
 warning: false
+output-dir: docs
 ---
 
 ## Report Overview
 
-Recent field surveys and drone flights at the US-SRG flux site enabled an  exploration of woody biomass estimation methods at fine and coarse spatial scales. In this report, we estimated woody biomass using three approaches:
+Recent field surveys and drone flights at the US-SRG flux site enabled an exploration of woody biomass estimation methods at fine and coarse spatial scales. In this report, we estimated woody biomass using three approaches:
 
-- Allometric equations based on field-measured basal diameter
-- Allometric equations applied to canopy metrics
-- Voxel-based calculations using high-density LiDAR
+-   Allometric equations based on field-measured basal diameter
+-   Allometric equations applied to canopy metrics
+-   Voxel-based calculations using high-density LiDAR
 
 In addition to estimating total biomass at the site, we apply these methods to estimate biomass along the biometric mesquite gradient at US-SRG. Finally, we examined trends in biomass products available at the site.
 
@@ -84,25 +85,25 @@ p2 <- ggplot(AGB, aes(x = BasalDi)) +
 p2+p1
 ```
 
-The total woody biomass from the census basal diameter observations is 12.66 Mg. 
+The total woody biomass from the census basal diameter observations is 12.66 Mg.
 
 ## Allometry with Canopy Metrics
 
 In order to estimate biomass from canopy metrics, we modeled an empirical relationship between canopy area and woody biomass using observations from the biometric gradient:
 
-Biomass = 0.1136 * (Canopy Area)^1.8890
+Biomass = 0.1136 \* (Canopy Area)\^1.8890
 
-Canopy area was derived automatically from a LiDAR-based canopy height model (CHM) using treetop detection and watershed segmentation to delineate individual tree crowns. We then applied the canopy area–biomass relationship to estimate total woody biomass within a 100-meter radius of the US-SRG flux tower for the automatically detected crowns, from manually detected crowns (see DronetoCensusComparison report in FluxandtheField repository), and crown metrics from field observations.
+Canopy area was derived automatically from a LiDAR-based canopy height model (CHM) using treetop detection and watershed segmentation to delineate individual tree crowns. We then applied the canopy area--biomass relationship to estimate total woody biomass within a 100-meter radius of the US-SRG flux tower for the automatically detected crowns, from manually detected crowns (see DronetoCensusComparison report in FluxandtheField repository), and crown metrics from field observations.
 
-To detect treetops on the CHM, we used a variable window filter, where the window size is a linear function of canopy height (y = ax + b). In the function, we also include a height threshold below which a default window size is applied. To identify optimal parameters for this function, we evaluated over 1,500 combinations of values based on their ability to  identify treetops and create a reasonable distribution of canopy areas relative to the manually delineated canopy crowns. More specifically, we evaluated the parameters based on the outputs':
+To detect treetops on the CHM, we used a variable window filter, where the window size is a linear function of canopy height (y = ax + b). In the function, we also include a height threshold below which a default window size is applied. To identify optimal parameters for this function, we evaluated over 1,500 combinations of values based on their ability to identify treetops and create a reasonable distribution of canopy areas relative to the manually delineated canopy crowns. More specifically, we evaluated the parameters based on the outputs':
 
-- Deviation in the number of detected crowns compared to manual delineation
+-   Deviation in the number of detected crowns compared to manual delineation
 
-- Deviation in the median canopy area
+-   Deviation in the median canopy area
 
-- Deviation in the distribution of canopy areas
+-   Deviation in the distribution of canopy areas
 
-- Statistical difference in distribution shape (Kolmogorov–Smirnov test)
+-   Statistical difference in distribution shape (Kolmogorov--Smirnov test)
 
 ```{r}
 #| fig-align: center
@@ -155,14 +156,15 @@ combined_plot <- wrap_plots(plotlist = plot_list, ncol = 2)
 combined_plot
 
 ```
+
 The optimal window function based on the parameters tested was:
 
-Window size = 0.6x + 0.3
-Window height threshold: < 2.6 m, window size = 4 m
+Window size = 0.6x + 0.3 Window height threshold: \< 2.6 m, window size = 4 m
 
-This combination of parameters agreed strongly with the manually delineated canopy area metrics, resulting in a crown count difference of 1, median canopy area difference of 1.45 m2, an overlap score of 0.82, and a Kolmogorov–Smirnov D value of 0.22.
+This combination of parameters agreed strongly with the manually delineated canopy area metrics, resulting in a crown count difference of 1, median canopy area difference of 1.45 m2, an overlap score of 0.82, and a Kolmogorov--Smirnov D value of 0.22.
 
 Although this method occasionally overdetects crowns in taller vegetation (left), and the segmented canopy polygons often underestimate crown area even when treetops are correctly located (right), the overall performance is comparable to the manually delineated reference.
+
 ```{r}
 #| fig-align: center
 #| fig-width: 10
@@ -222,6 +224,7 @@ plot(survey_outline,
 plot(underpred, col = adjustcolor("blue", 0.6), add = TRUE)
 plot(overpred, col = adjustcolor("red", 0.6), add = TRUE)
 ```
+
 To further assess precision, we compared total woody biomass estimates derived from three sources of canopy area measurements:
 
 Automated LiDAR-based segmentation: 11.7 Mg
@@ -229,6 +232,7 @@ Automated LiDAR-based segmentation: 11.7 Mg
 Manual canopy delineation: 18.0 Mg
 
 Field observations: 3.8 Mg
+
 ```{r}
 #| fig-align: center
 #| fig-width: 10
@@ -318,6 +322,7 @@ ggplot(biomass_df, aes(x = predicted_biomass, fill = method, color = method)) +
 
 
 ```
+
 ## Voxelization
 
 For the final biomass estimation method, we used voxelized a LiDAR point cloud data a cube size of 2.5 cm. Points were filtered to exclude noise and low-returns associated with grasses. Unlike the segmentation-based method, voxelization allowed us to estimate biomass across the entire area without requiring delineation of individual tree crowns.
@@ -331,6 +336,7 @@ It is important to note, however, that this method is highly sensitive to voxel 
 After evaluating biomass estimation methods at the ecosystem scale, we narrowed our focus to a set of 10 individual trees spanning a wide range of heights, basal diameters, canopy diameters, and growth forms. We refer to these tree as the biometric gradient. For each tree, we estimated aboveground biomass using all available methods described above.
 
 Voxel-based estimates consistently produced higher biomass values compared to other approaches. In contrast, the automated crown detection method tended to output lower biomass estimates. The estimates from basal diameter and canopy diameter were generally similar. This was expected since both rely on the same allometric relationship.
+
 ```{r}
 #| fig-align: center
 #| fig-width: 12
@@ -488,9 +494,11 @@ ggplot(biomet_long, aes(x = factor(ID), y = biomass, fill = method)) +
         legend.title = element_text(size = 18)
   )
 ```
+
 ## Biomass Products
 
-Direct comparison between the biomass estimates from the methods explored above and existing biomass products is challenging due to the differences in temporal coverage and original spatial resolution. We compare them regardless and observe substantial variability across both fine and large scale approaches. 
+Direct comparison between the biomass estimates from the methods explored above and existing biomass products is challenging due to the differences in temporal coverage and original spatial resolution. We compare them regardless and observe substantial variability across both fine and large scale approaches.
+
 ```{r}
 #| fig-align: center
 #| fig-width: 10

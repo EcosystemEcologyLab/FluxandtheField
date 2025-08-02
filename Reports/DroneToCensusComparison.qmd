@@ -1,7 +1,7 @@
 ---
 title: "Comparison of Drone and Ground Data at US-SRG"
 author: "Lindsey Bell"
-format: html
+format: docx
 editor: visual
 echo: false
 message: false
@@ -52,7 +52,7 @@ plot(chm_crop,
      axes = F,
      legend = F,
      cex.main = 3)
-plot(canpol, add = T, border = "red", lwd = 1.5)
+plot(canpol, add = T, border = "red", lwd = 2.5)
 
 
 ```

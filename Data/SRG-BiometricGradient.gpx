@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<gpx creator="Garmin Explore App" version="1.1" xmlns:adv="http://www.garmin.com/xmlschemas/AdventuresExtensions/v1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1" xmlns:gpxtrx="http://www.garmin.com/xmlschemas/GpxExtensions/v3" xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3" xmlns:trp="http://www.garmin.com/xmlschemas/TripExtensions/v1" xmlns:wptx1="http://www.garmin.com/xmlschemas/WaypointExtension/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.topografix.com/GPX/1/1" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd http://www.garmin.com/xmlschemas/WaypointExtension/v1 http://www8.garmin.com/xmlschemas/WaypointExtensionv1.xsd http://www.garmin.com/xmlschemas/TrackPointExtension/v1 http://www.garmin.com/xmlschemas/TrackPointExtensionv1.xsd http://www.garmin.com/xmlschemas/GpxExtensions/v3 http://www8.garmin.com/xmlschemas/GpxExtensionsv3.xsd http://www.garmin.com/xmlschemas/ActivityExtension/v1 http://www8.garmin.com/xmlschemas/ActivityExtensionv1.xsd http://www.garmin.com/xmlschemas/AdventuresExtensions/v1 http://www8.garmin.com/xmlschemas/AdventuresExtensionv1.xsd http://www.garmin.com/xmlschemas/PressureExtension/v1 http://www.garmin.com/xmlschemas/PressureExtensionv1.xsd">
+	<metadata>
+		<name>SRG-BiometricGradient</name>
+		<link href="http://www.garmin.com">
+			<text>Garmin International</text>
+		</link>
+		<time>2025-06-18T16:45:58Z</time>
+	</metadata>
+	<wpt lat="31.789180040359497" lon="-110.82787001132965">
+		<ele>752.0171508789062</ele>
+		<time>2025-06-10T16:37:59Z</time>
+		<name>SRG_Biomet004</name>
+		<sym>Flag, Blue</sym>
+	</wpt>
+	<wpt lat="31.789690017700195" lon="-110.82816994190216">
+		<ele>752.0316772460938</ele>
+		<time>2025-06-10T16:36:03Z</time>
+		<name>SRG_Biomet002</name>
+		<sym>Flag, Blue</sym>
+	</wpt>
+	<wpt lat="31.789170026779175" lon="-110.82756996154785">
+		<ele>752.03759765625</ele>
+		<time>2025-06-10T16:39:40Z</time>
+		<name>SRG_Biomet006</name>
+		<sym>Flag, Blue</sym>
+	</wpt>
+	<wpt lat="31.78922998905182" lon="-110.8281500339508">
+		<ele>752.0318603515625</ele>
+		<time>2025-06-10T16:37:12Z</time>
+		<name>SRG_Biomet003</name>
+		<sym>Flag, Blue</sym>
+	</wpt>
+	<wpt lat="31.78931999206543" lon="-110.82780003547668">
+		<ele>751.991943359375</ele>
+		<time>2025-06-10T16:38:37Z</time>
+		<name>SRG_Biomet005</name>
+		<sym>Flag, Blue</sym>
+	</wpt>
+	<wpt lat="31.789549946784973" lon="-110.82721996307373">
+		<ele>752.0034790039062</ele>
+		<time>2025-06-10T16:40:48Z</time>
+		<name>SRG_Biomet008</name>
+		<sym>Flag, Blue</sym>
+	</wpt>
+	<wpt lat="31.789420008659363" lon="-110.82787001132965">
+		<ele>752.03564453125</ele>
+		<time>2025-06-10T16:40:16Z</time>
+		<name>SRG_Biomet007</name>
+		<sym>Flag, Blue</sym>
+	</wpt>
+	<wpt lat="31.789700031280518" lon="-110.82712996006012">
+		<ele>751.9807739257812</ele>
+		<time>2025-06-10T16:41:26Z</time>
+		<name>SRG_Biomet009</name>
+		<sym>Flag, Blue</sym>
+	</wpt>
+	<wpt lat="31.78954005241394" lon="-110.82776999473572">
+		<ele>752.0081176757812</ele>
+		<time>2025-06-10T16:42:00Z</time>
+		<name>SRG_Biomet010</name>
+		<sym>Flag, Blue</sym>
+	</wpt>
+	<wpt lat="31.78991997241974" lon="-110.82808995246887">
+		<ele>751.9961547851562</ele>
+		<time>2025-06-10T16:34:32Z</time>
+		<name>SRG_Biomet001</name>
+		<sym>Flag, Blue</sym>
+	</wpt>
+</gpx>

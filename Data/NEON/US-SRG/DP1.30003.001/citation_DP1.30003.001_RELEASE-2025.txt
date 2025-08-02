@@ -1,0 +1,11 @@
+@misc{https://doi.org/10.48443/jyb5-g533,
+  doi = {10.48443/JYB5-G533},
+  url = {https://data.neonscience.org/data-products/DP1.30003.001/RELEASE-2025},
+  author = {{National Ecological Observatory Network (NEON)}},
+  keywords = {airborne, aerial, remote sensing, LAZ, point cloud, digital elevation model (DEM), digital terrain model (DTM), light detection and ranging (LiDAR), LASer file format (LAS), digital surface model (DSM), biodiversity},
+  language = {en},
+  title = {Discrete return LiDAR point cloud (DP1.30003.001)},
+  publisher = {National Ecological Observatory Network (NEON)},
+  year = {2025}
+}
+

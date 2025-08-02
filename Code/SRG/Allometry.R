@@ -1,6 +1,7 @@
 #estimate biomass for US-SRG from field observations and Jenkins 2003 equations, 
 #Chojnacky 2013 parameters
 library(dplyr)
+library(patchwork)
 
 veg_dat <- read.csv("./Data/GitData/US-SRG_WoodyPlantCensus_28052025.csv")%>%
   filter(Distance < 60)%>%
@@ -22,15 +23,26 @@ AGB_willow <- willows %>%
   filter(!is.na(BasalDi)) %>% 
   mutate(biomass = exp((-2.4441) + 2.4561 * log(BasalDi)))
 
-AGB <- bind_rows(AGB_shrubs, AGB_willow)
+AGB <- bind_rows(AGB_shrubs, AGB_willow)%>%
+  mutate(Mg_biomass = biomass*0.001)
 AGB_total <- sum(AGB$biomass, na.rm = T)* 0.001 #in kg, so scale by 0.001 for Mg
 
-ggplot(AGB, aes(x = biomass)) +
-  geom_histogram(binwidth = 20, fill = "#1b9e77", color = "black", boundary = 0) +
-  labs(title = "Frequency of Biomass Values",
-       x = "Biomass (kg)",
+p1 <- ggplot(AGB, aes(x = Mg_biomass)) +
+  geom_histogram(binwidth = 0.05, fill = "#1b9e77", color = "black", boundary = 0) +
+  labs(title = "",
+       x = "Biomass (Mg)",
        y = "Count") +
   theme_minimal()
+
+
+p2 <- ggplot(AGB, aes(x = BasalDi)) +
+  geom_histogram(binwidth = 5, fill = "#1b9e77", color = "black", boundary = 0) +
+  labs(title = "",
+       x = "Basal Diameter (cm)",
+       y = "Count") +
+  theme_minimal()
+
+p1+p2
 #===============================================================================
 #allometry for gradient
 SRGdat <-  read.csv("./Data/GitData/US-SRG_BiometGrad_07062025.csv")%>%

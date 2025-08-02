@@ -41,25 +41,25 @@ chm <- chm_crop
 # }
 
 
-# custom_ws <- function(x) {
-#   y <- ceiling(1.211 * x + 0.024)
-#   y[x < 2] <- 5
-#   return(y)
-# }
 custom_ws <- function(x) {
-  y <- ceiling(0.5 * x + 0.024)
-  y[x < 3] <- 6
+  y <- ceiling(1.211 * x + 0.024)
+  y[x < 2] <- 5
   return(y)
 }
-#smooth chm raster 
-kernel <- matrix(1,3,3)
-chm_smoothed <- terra::focal(chm, w = kernel, fun = median, na.rm = TRUE)
+custom_ws <- function(x) {
+  y <- ceiling(0.6 * x + (0.3))
+  y[x < 2.6] <- 4
+  return(y)
+}
+# #smooth chm raster
+# kernel <- matrix(1,3,3)
+# chm_smoothed <- terra::focal(chm, w = kernel, fun = median, na.rm = TRUE)
 
 #identify tree tops
 ttops <- locate_trees(las = chm_smoothed, algorithm = lmf(ws = custom_ws, hmin=1)) # lms 2.5
 
 plot(chm_smoothed)
-plot(ttops, col = "black", add = TRUE, cex = 0.5)
+plot(ttops, col = "white", add = TRUE, cex = 0.5)
 
 
 
@@ -136,8 +136,8 @@ filt_crowns$area <- st_area(filt_crowns) |> as.numeric()
 #compare to manually delineated crowns
 # n.b. for a circle, not square
 
-chm <- readRDS("./Data/GitData/SRGchm.RDS")
-chm[chm < 0 | chm > 20] <- NA
+# chm <- readRDS("./Data/GitData/SRGchm.RDS")
+# chm[chm < 0 | chm > 20] <- NA
 
 #use manually traced polygons to calc canopy stats
 sfpath <- "./Data/GitData/canopypolys.shp"
@@ -216,3 +216,42 @@ ggplot(area_comparison, aes(x = Area, fill = Method)) +
 
 # Test for significant difference in area distributions
 wilcox.test(Area ~ Method, data = area_comparison)
+
+
+
+
+
+
+#=============================================================================
+#compare canopy differences
+
+manu_output <- vect("./Data/GitData/canopypolys.shp")
+auto_output <- vect("./Data/testJiamingcrowns2.shp")
+survey_outline <- vect("./QGIS/100msurveybuffer.shp")
+
+manushp <- crop(manu_output, survey_outline)
+autoshp <- crop(auto_output, survey_outline)
+
+
+overpred <- erase(autoshp, manushp)
+underpred <- erase(manushp, autoshp)
+
+par(mar = c(5, 4, 4, 2))  # more space at bottom (bottom, left, top, right)
+
+plot(survey_outline, col = "grey90", border = NA, axes = FALSE, frame = FALSE,
+     main = "")
+
+plot(underpred, col = adjustcolor("blue", 0.6), add = TRUE)
+plot(overpred, col = adjustcolor("red", 0.6), add = TRUE)
+
+legend("bottom", inset = c(0, -0.15),
+       legend = c("Under-prediction", "Over-prediction"),
+       fill   = c("blue", "red"),
+       border = NA,
+       bty    = "n",
+       cex    = 1.1,
+       horiz  = TRUE,
+       xpd    = TRUE)
+
+
+

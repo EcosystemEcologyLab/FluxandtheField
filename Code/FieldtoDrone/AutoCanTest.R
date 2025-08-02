@@ -1,3 +1,48 @@
+#create a relationship between biomass and canopy diameter using allometry and biomet grad
+
+SRGdat <-  read.csv("./Data/GitData/US-SRG_BiometGrad_07062025.csv")%>%
+  mutate(Site = "US-SRG")%>%
+  group_by(ID)%>%
+  summarize(BasalDi = mean(BasalDiameter, na.rm = T),
+            CanopyDi = mean(CanopyDiameter, na.rm = T))%>%
+  mutate(biomass = exp((-2.9255) + 2.4109 * log(BasalDi)))%>% #in kg
+  #select(-BasalDi)%>%
+  mutate(method = "Allometry")
+
+model <- nls(biomass ~ a * CanopyDi^b,
+             data = SRGdat,
+             start = list(a = 0.1, b = 1)
+             )
+
+ggplot(SRGdat, aes(x = CanopyDi, y = biomass)) +
+  geom_point() +
+  stat_function(fun = function(x) {
+    coef(model)["a"] * x^coef(model)["b"]
+  }, color = "blue", size = 1) +
+  labs(title = "")
+
+new_df$predicted_biomass <- predict(model, newdata = new_df)
+
+
+
+manu_output <- vect("./Data/GitData/canopypolys.shp")
+auto_output <- vect("./Data/testJiamingcrowns2.shp")
+survey_outline <- vect("./QGIS/100msurveybuffer.shp")
+
+manushp <- crop(manu_output, survey_outline)
+autoshp <- crop(auto_output, survey_outline)
+
+
+
+
+
+
+
+
+
+
+
+
 #mesquite mask
 mesmask <- rast("X:/moore/SRER/RF_allyr_SRER_norton.tif")
 

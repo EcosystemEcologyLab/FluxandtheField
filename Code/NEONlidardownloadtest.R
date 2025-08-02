@@ -1,3 +1,7 @@
+#download NEON data 
+#DP3.30015.001 = canopy height model product
+#DP1.30003.001 = discrete return lidar
+
 library(neonUtilities)
 library(sf)
 #load function to convert lat/lon to UTM----------------------------------------
@@ -56,7 +60,8 @@ for (i in locations) {
         buffer = 200,
         include.provisional = T,
         check.size = T,
-        savepath = i$savepath
+        savepath = i$savepath,
+        token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJhdWQiOiJodHRwczovL2RhdGEubmVvbnNjaWVuY2Uub3JnL2FwaS92MC8iLCJzdWIiOiJsaW5kc2V5YmVsbEBhcml6b25hLmVkdSIsInNjb3BlIjoicmF0ZTpwdWJsaWMiLCJpc3MiOiJodHRwczovL2RhdGEubmVvbnNjaWVuY2Uub3JnLyIsImV4cCI6MTkxMTE0NTU0MCwiaWF0IjoxNzUzNDY1NTQwLCJlbWFpbCI6ImxpbmRzZXliZWxsQGFyaXpvbmEuZWR1In0.f7uTfAgCUP4t3p9qdm9eaIh3bSfi0KlQ6EmFpnRxRMPeiogxCeWDNjlXUYG0kbTsKUloywaGLMJMeV0Pp4GtqA"
       )
     }, silent = TRUE)
   }
@@ -64,3 +69,18 @@ for (i in locations) {
 
 
 #---------------------------------------
+
+
+byTileAOP(
+  dpID = "DP3.30015.001",
+  site = "SRER",
+  year = 2024,
+  easting = SRM_UTM[1],
+  northing = SRM_UTM[2],
+  buffer = 200,
+  include.provisional = T,
+  check.size = T,
+  savepath = "./Data/NEON/US-SRM",
+  options(timeout = 1000),
+  token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJhdWQiOiJodHRwczovL2RhdGEubmVvbnNjaWVuY2Uub3JnL2FwaS92MC8iLCJzdWIiOiJsaW5kc2V5YmVsbEBhcml6b25hLmVkdSIsInNjb3BlIjoicmF0ZTpwdWJsaWMiLCJpc3MiOiJodHRwczovL2RhdGEubmVvbnNjaWVuY2Uub3JnLyIsImV4cCI6MTkxMTE0NTU0MCwiaWF0IjoxNzUzNDY1NTQwLCJlbWFpbCI6ImxpbmRzZXliZWxsQGFyaXpvbmEuZWR1In0.f7uTfAgCUP4t3p9qdm9eaIh3bSfi0KlQ6EmFpnRxRMPeiogxCeWDNjlXUYG0kbTsKUloywaGLMJMeV0Pp4GtqA"
+)

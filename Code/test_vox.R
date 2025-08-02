@@ -57,6 +57,9 @@ biomass_raster <- rast(x = biomass_by_xy[, .(x, y, biomass_kg)],
 #height_raster <- rast(x = height_by_xy, type = "xyz", crs = crs(las_filt))
 #plot(biomass_raster, col = viridis(100), main = "Biomass (kg per column)")
 
+biomass_sum <- terra::extract(biomass_raster, survey_outline, fun = sum, na.rm = TRUE)
+biomass_sum*0.001
+
 #summarize total
 total_biomass_kg <- sum(biomass_by_xy$biomass_kg)
 total_biomass_Mg <- total_biomass_kg / 1000
@@ -120,7 +123,7 @@ poly_biomass_table <- data.frame(
 )
 tree_biomass <- left_join(manual_mapping, poly_biomass_table, by = "polyID")
 
-
+saveRDS(tree_biomass, "./Data/biomet_vox_biomass.RDS")
 
 
 

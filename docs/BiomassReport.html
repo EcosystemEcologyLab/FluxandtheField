@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.353">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Lindsey Bell">
+
+<title>Biomass Report</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="BiomassReport_files/libs/clipboard/clipboard.min.js"></script>
+<script src="BiomassReport_files/libs/quarto-html/quarto.js"></script>
+<script src="BiomassReport_files/libs/quarto-html/popper.min.js"></script>
+<script src="BiomassReport_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="BiomassReport_files/libs/quarto-html/anchor.min.js"></script>
+<link href="BiomassReport_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="BiomassReport_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="BiomassReport_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="BiomassReport_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="BiomassReport_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Biomass Report</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Lindsey Bell </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<section id="report-overview" class="level2">
+<h2 class="anchored" data-anchor-id="report-overview">Report Overview</h2>
+<p>Recent field surveys and drone flights at the US-SRG flux site enabled an exploration of woody biomass estimation methods at fine and coarse spatial scales. In this report, we estimated woody biomass using three approaches:</p>
+<ul>
+<li>Allometric equations based on field-measured basal diameter</li>
+<li>Allometric equations applied to canopy metrics</li>
+<li>Voxel-based calculations using high-density LiDAR</li>
+</ul>
+<p>In addition to estimating total biomass at the site, we apply these methods to estimate biomass along the biometric mesquite gradient at US-SRG. Finally, we examined trends in biomass products available at the site.</p>
+</section>
+<section id="allometry-with-basal-diameter" class="level2">
+<h2 class="anchored" data-anchor-id="allometry-with-basal-diameter">Allometry with Basal Diameter</h2>
+<p>At the end of May 2025, we conducted a woody plant census within a 100-meter radius of the US-SRG flux tower. During this survey, we recorded basal and canopy diameter for all individual shrubs and trees. To estimate aboveground biomass, we applied an allometric equation originally described by Jenkins et al.&nbsp;(2003) and later revised by Chojnacky et al.&nbsp;(2013). Given that the vegetation at US-SRG is dominated by mesquite (Prosopis spp.), we used the equation specific to Woodland Fabaceae/Rosaceae:</p>
+<p>Biomass = exp(−2.9255 + 2.4109 × log(x))</p>
+<p>where x is diameter at root collar (DRC) in centimeters.</p>
+<p>We made two key assumptions in applying this relationship. First, because DRC was not measured directly, we approximated it using basal diameter measurements. Second, although the equation is primarily based on mesquite data, we include additional woody desert shrubs: hackberry (Celtis pallida), greythorn (Ziziphus obtusifolia), whitethorn acacia (Vachellia constricta), and catclaw acacia (Senegalia greggii). For multi-stemmed individuals, we used the average basal diameter across stems.</p>
+<p>For desert willow (Chilopsis linearis), we applied a separate equation using diameter at breast height (DBH), with parameters as follows:</p>
+<p>Biomass = exp(−2.4441 + 2.4561 × log(x))</p>
+<p>where x is DBH in centimeters.</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="BiomassReport_files/figure-html/unnamed-chunk-1-1.png" class="img-fluid figure-img" width="768"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>The total woody biomass from the census basal diameter observations is 12.66 Mg.</p>
+</section>
+<section id="allometry-with-canopy-metrics" class="level2">
+<h2 class="anchored" data-anchor-id="allometry-with-canopy-metrics">Allometry with Canopy Metrics</h2>
+<p>In order to estimate biomass from canopy metrics, we modeled an empirical relationship between canopy area and woody biomass using observations from the biometric gradient:</p>
+<p>Biomass = 0.1136 * (Canopy Area)^1.8890</p>
+<p>Canopy area was derived automatically from a LiDAR-based canopy height model (CHM) using treetop detection and watershed segmentation to delineate individual tree crowns. We then applied the canopy area–biomass relationship to estimate total woody biomass within a 100-meter radius of the US-SRG flux tower for the automatically detected crowns, from manually detected crowns (see DronetoCensusComparison report in FluxandtheField repository), and crown metrics from field observations.</p>
+<p>To detect treetops on the CHM, we used a variable window filter, where the window size is a linear function of canopy height (y = ax + b). In the function, we also include a height threshold below which a default window size is applied. To identify optimal parameters for this function, we evaluated over 1,500 combinations of values based on their ability to identify treetops and create a reasonable distribution of canopy areas relative to the manually delineated canopy crowns. More specifically, we evaluated the parameters based on the outputs’:</p>
+<ul>
+<li><p>Deviation in the number of detected crowns compared to manual delineation</p></li>
+<li><p>Deviation in the median canopy area</p></li>
+<li><p>Deviation in the distribution of canopy areas</p></li>
+<li><p>Statistical difference in distribution shape (Kolmogorov–Smirnov test)</p></li>
+</ul>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="BiomassReport_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid figure-img" width="1440"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>The optimal window function based on the parameters tested was:</p>
+<p>Window size = 0.6x + 0.3 Window height threshold: &lt; 2.6 m, window size = 4 m</p>
+<p>This combination of parameters agreed strongly with the manually delineated canopy area metrics, resulting in a crown count difference of 1, median canopy area difference of 1.45 m2, an overlap score of 0.82, and a Kolmogorov–Smirnov D value of 0.22.</p>
+<p>Although this method occasionally overdetects crowns in taller vegetation (left), and the segmented canopy polygons often underestimate crown area even when treetops are correctly located (right), the overall performance is comparable to the manually delineated reference.</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="BiomassReport_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid figure-img" width="960"></p>
+<figcaption class="figure-caption">Left: 0.5-m canopy height model (CHM) within 100m of the US-SRG flux tower. White circles represent automatically detected treetops. Yellow colors on the CHM indicate large values while purple colors indicate small values. Right: Difference in canopy areas between the automatically and manually detected canopies for canopies within the field survey boundary (~100m around the US-SRG tower). Blue represents an underprediction and red represents on overprediction of canopy area by the automatic detection.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>To further assess precision, we compared total woody biomass estimates derived from three sources of canopy area measurements:</p>
+<p>Automated LiDAR-based segmentation: 11.7 Mg</p>
+<p>Manual canopy delineation: 18.0 Mg</p>
+<p>Field observations: 3.8 Mg</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="BiomassReport_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid figure-img" width="960"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="voxelization" class="level2">
+<h2 class="anchored" data-anchor-id="voxelization">Voxelization</h2>
+<p>For the final biomass estimation method, we used voxelized a LiDAR point cloud data a cube size of 2.5 cm. Points were filtered to exclude noise and low-returns associated with grasses. Unlike the segmentation-based method, voxelization allowed us to estimate biomass across the entire area without requiring delineation of individual tree crowns.</p>
+<p>We applied a specific wood density of 0.78 g cm-3 (Chojnacky et al., 2013), to convert voxelized volume into woody biomass. Using this method, the total estimated biomass within the survey boundary was 46.9 Mg.</p>
+<p>It is important to note, however, that this method is highly sensitive to voxel resolution. For example, increasing the voxel side length to 5 cm resulted in a biomass estimate of 325.6 Mg. Further work is needed to understand the influence of voxel resolution on estimating biomass and what criteria is needed to select a voxel size.</p>
+</section>
+<section id="biometric-gradient-comparison" class="level2">
+<h2 class="anchored" data-anchor-id="biometric-gradient-comparison">Biometric Gradient Comparison</h2>
+<p>After evaluating biomass estimation methods at the ecosystem scale, we narrowed our focus to a set of 10 individual trees spanning a wide range of heights, basal diameters, canopy diameters, and growth forms. We refer to these tree as the biometric gradient. For each tree, we estimated aboveground biomass using all available methods described above.</p>
+<p>Voxel-based estimates consistently produced higher biomass values compared to other approaches. In contrast, the automated crown detection method tended to output lower biomass estimates. The estimates from basal diameter and canopy diameter were generally similar. This was expected since both rely on the same allometric relationship.</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="BiomassReport_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="1152"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="biomass-products" class="level2">
+<h2 class="anchored" data-anchor-id="biomass-products">Biomass Products</h2>
+<p>Direct comparison between the biomass estimates from the methods explored above and existing biomass products is challenging due to the differences in temporal coverage and original spatial resolution. We compare them regardless and observe substantial variability across both fine and large scale approaches.</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="BiomassReport_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="960"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>

@@ -1,0 +1,570 @@
+---
+title: "Biomass Report 8/1/2025"
+author: "Lindsey Bell"
+format: html
+editor: visual
+echo: false
+message: false
+warning: false
+---
+
+## Report Overview
+
+Recent field surveys and drone flights at the US-SRG flux site enabled an  exploration of woody biomass estimation methods at fine and coarse spatial scales. In this report, we estimated woody biomass using three approaches:
+
+- Allometric equations based on field-measured basal diameter
+- Allometric equations applied to canopy metrics
+- Voxel-based calculations using high-density LiDAR
+
+In addition to estimating total biomass at the site, we apply these methods to estimate biomass along the biometric mesquite gradient at US-SRG. Finally, we examined trends in biomass products available at the site.
+
+## Allometry with Basal Diameter
+
+At the end of May 2025, we conducted a woody plant census within a 100-meter radius of the US-SRG flux tower. During this survey, we recorded basal and canopy diameter for all individual shrubs and trees. To estimate aboveground biomass, we applied an allometric equation originally described by Jenkins et al. (2003) and later revised by Chojnacky et al. (2013). Given that the vegetation at US-SRG is dominated by mesquite (Prosopis spp.), we used the equation specific to Woodland Fabaceae/Rosaceae:
+
+Biomass = exp(−2.9255 + 2.4109 × log(x))
+
+where x is diameter at root collar (DRC) in centimeters.
+
+We made two key assumptions in applying this relationship. First, because DRC was not measured directly, we approximated it using basal diameter measurements. Second, although the equation is primarily based on mesquite data, we include additional woody desert shrubs: hackberry (Celtis pallida), greythorn (Ziziphus obtusifolia), whitethorn acacia (Vachellia constricta), and catclaw acacia (Senegalia greggii). For multi-stemmed individuals, we used the average basal diameter across stems.
+
+For desert willow (Chilopsis linearis), we applied a separate equation using diameter at breast height (DBH), with parameters as follows:
+
+Biomass = exp(−2.4441 + 2.4561 × log(x))
+
+where x is DBH in centimeters.
+
+```{r}
+#| fig-align: center
+#| fig-width: 8
+#| fig-height: 4
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+
+veg_dat <- read.csv("../Data/GitData/US-SRG_WoodyPlantCensus_28052025.csv")%>%
+  filter(Distance < 60)%>%
+  group_by(ID)%>%
+  reframe(Quadrant, 
+          Species, 
+          BasalDi = mean(BasalDiameter, na.rm = T))%>%
+  group_by(ID)%>%
+  slice(1)
+
+bigshrubs <- veg_dat%>%
+  filter(Species %in% c("ACIA", "CHAC", "GTN", "HAC", "MES", "WAC", "WTA"))
+AGB_shrubs <- bigshrubs%>%
+  mutate(biomass = exp((-2.9255) + 2.4109 * log(BasalDi)))
+
+willows <- veg_dat%>%
+  filter(Species == "SALIX")
+AGB_willow <- willows %>% 
+  filter(!is.na(BasalDi)) %>% 
+  mutate(biomass = exp((-2.4441) + 2.4561 * log(BasalDi)))
+
+AGB <- bind_rows(AGB_shrubs, AGB_willow)%>%
+  mutate(Mg_biomass = biomass*0.001)
+AGB_total <- sum(AGB$biomass, na.rm = T)* 0.001 #in kg, so scale by 0.001 for Mg
+
+p1 <- ggplot(AGB, aes(x = Mg_biomass)) +
+  geom_histogram(binwidth = 0.05, fill = "#1b9e77", color = "black", boundary = 0) +
+  labs(title = "",
+       x = "Biomass (Mg)",
+       y = "Count") +
+  theme_minimal()
+
+
+p2 <- ggplot(AGB, aes(x = BasalDi)) +
+  geom_histogram(binwidth = 5, fill = "#1b9e77", color = "black", boundary = 0) +
+  labs(title = "",
+       x = "Basal Diameter (cm)",
+       y = "Count") +
+  theme_minimal()
+
+p2+p1
+```
+
+The total woody biomass from the census basal diameter observations is 12.66 Mg. 
+
+## Allometry with Canopy Metrics
+
+In order to estimate biomass from canopy metrics, we modeled an empirical relationship between canopy area and woody biomass using observations from the biometric gradient:
+
+Biomass = 0.1136 * (Canopy Area)^1.8890
+
+Canopy area was derived automatically from a LiDAR-based canopy height model (CHM) using treetop detection and watershed segmentation to delineate individual tree crowns. We then applied the canopy area–biomass relationship to estimate total woody biomass within a 100-meter radius of the US-SRG flux tower for the automatically detected crowns, from manually detected crowns (see DronetoCensusComparison report in FluxandtheField repository), and crown metrics from field observations.
+
+To detect treetops on the CHM, we used a variable window filter, where the window size is a linear function of canopy height (y = ax + b). In the function, we also include a height threshold below which a default window size is applied. To identify optimal parameters for this function, we evaluated over 1,500 combinations of values based on their ability to  identify treetops and create a reasonable distribution of canopy areas relative to the manually delineated canopy crowns. More specifically, we evaluated the parameters based on the outputs':
+
+- Deviation in the number of detected crowns compared to manual delineation
+
+- Deviation in the median canopy area
+
+- Deviation in the distribution of canopy areas
+
+- Statistical difference in distribution shape (Kolmogorov–Smirnov test)
+
+```{r}
+#| fig-align: center
+#| fig-width: 15
+#| fig-height: 12
+library(tidyverse)
+library(ggplot2)
+library(patchwork)
+
+df <- readRDS("../Data/parameterization.RDS")
+
+output_vars <- c("overlap", "count_diff", "median_diff", "D")
+yaxis_titles <- c("Overlap", "Crown Difference", "Median Difference", "KS Test")
+
+param_labels <- c(
+  a = "Slope",
+  b = "Intercept",
+  floor_thresh = "Height Threshold",
+  floor_val = "Default Size"
+)
+
+plot_list <- list()
+
+for (i in seq_along(output_vars)) {
+  output_var <- output_vars[i]
+  y_title <- yaxis_titles[i]
+  
+  param_long <- df %>%
+    pivot_longer(cols = c(a, b, floor_thresh, floor_val),
+                 names_to = "parameter", values_to = "param_value") %>%
+    select(parameter, param_value, all_of(output_var))
+  
+  colnames(param_long)[3] <- "output_value"
+  
+  p <- ggplot(param_long, aes(x = as.factor(param_value), y = output_value)) +
+    geom_boxplot(fill = "lightblue", alpha = 0.8) +
+    facet_wrap(~parameter, scales = "free_x",
+               labeller = as_labeller(param_labels)) +
+    labs(x = "", y = y_title) +
+    theme_minimal(base_size = 14) +
+    theme(axis.text.x = element_text(size = 18, angle = 60, hjust = 1),
+          axis.text.y = element_text(size = 18),
+          strip.text = element_text(size = 24),
+          axis.title.y = element_text(size = 24))
+  
+  plot_list[[i]] <- p
+}
+
+combined_plot <- wrap_plots(plotlist = plot_list, ncol = 2)
+combined_plot
+
+```
+The optimal window function based on the parameters tested was:
+
+Window size = 0.6x + 0.3
+Window height threshold: < 2.6 m, window size = 4 m
+
+This combination of parameters agreed strongly with the manually delineated canopy area metrics, resulting in a crown count difference of 1, median canopy area difference of 1.45 m2, an overlap score of 0.82, and a Kolmogorov–Smirnov D value of 0.22.
+
+Although this method occasionally overdetects crowns in taller vegetation (left), and the segmented canopy polygons often underestimate crown area even when treetops are correctly located (right), the overall performance is comparable to the manually delineated reference.
+```{r}
+#| fig-align: center
+#| fig-width: 10
+#| fig-height: 5
+#| fig-cap: "Left: 0.5-m canopy height model (CHM) within 100m of the US-SRG flux tower. White circles represent automatically detected treetops. Yellow colors on the CHM indicate large values while purple colors indicate small values. Right: Difference in canopy areas between the automatically and manually detected canopies for canopies within the field survey boundary (~100m around the US-SRG tower). Blue represents an underprediction and red represents on overprediction of canopy area by the automatic detection. "
+
+library(lidR)
+library(sf)
+library(terra)
+
+custom_ws <- function(x) {
+  y <- ceiling(0.6 * x + (0.3))
+  y[x < 2.6] <- 4
+  return(y)
+}
+
+chm_load <- rast("../Data/0.5mSRGchm.tif")
+survey_outline <- vect("../QGIS/100msurveybuffer.shp")
+chm_crop <- crop(chm_load, survey_outline)
+chm <- chm_crop
+kernel <- matrix(1,3,3)
+chm_smoothed <- terra::focal(chm, w = kernel, fun = median, na.rm = TRUE)
+ttops <- locate_trees(las = chm_smoothed, algorithm = lmf(ws = custom_ws, hmin=1)) # lms 2.5
+
+#-----------------------------------------
+
+manu_output <- vect("../Data/GitData/canopypolys.shp")
+auto_output <- vect("../Data/testJiamingcrowns2.shp")
+survey_outline <- vect("../QGIS/100msurveybuffer.shp")
+
+manushp <- crop(manu_output, survey_outline)
+autoshp <- crop(auto_output, survey_outline)
+
+
+overpred <- erase(autoshp, manushp)
+underpred <- erase(manushp, autoshp)
+#-----------------------------------------
+par(mfrow = c(1, 2), mar = c(1, 1, 1, 1), oma = c(0, 0, 0, 0))  # Small margins
+
+# Plot 1: CHM + treetops
+plot(
+  chm_smoothed,
+  axes = FALSE,
+  box = FALSE,
+  legend = FALSE
+)
+plot(ttops, col = "white", add = TRUE, cex = 0.6, pch = 14)
+
+# Plot 2: Over- and under-prediction
+plot(survey_outline,
+     col = "grey90",
+     border = NA,
+     axes = FALSE,
+     frame = FALSE,
+     main = "")
+
+plot(underpred, col = adjustcolor("blue", 0.6), add = TRUE)
+plot(overpred, col = adjustcolor("red", 0.6), add = TRUE)
+```
+To further assess precision, we compared total woody biomass estimates derived from three sources of canopy area measurements:
+
+Automated LiDAR-based segmentation: 11.7 Mg
+
+Manual canopy delineation: 18.0 Mg
+
+Field observations: 3.8 Mg
+```{r}
+#| fig-align: center
+#| fig-width: 10
+#| fig-height: 8
+#observations: 
+library(dplyr)
+library(terra)
+library(ggplot2)
+
+veg_dat <- read.csv("../Data/GitData/US-SRG_WoodyPlantCensus_28052025.csv")%>%
+  filter(Distance < 60)%>%
+  group_by(ID)%>%
+  reframe(Quadrant, 
+          Species, 
+          CanDi = mean(CrownDiameter, na.rm = T))%>%
+  group_by(ID)%>%
+  slice(1)
+
+obsdf <- veg_dat%>%
+  filter(Species %in% c("ACIA", "CHAC", "GTN", "HAC", "MES", "WAC", "WTA", "Salix"))%>%
+  mutate(area = pi*((CanDi/2)^2))
+
+#===========================
+#model from biomet grad
+
+SRGdat <-  read.csv("../Data/GitData/US-SRG_BiometGrad_07062025.csv")%>%
+  mutate(Site = "US-SRG")%>%
+  group_by(ID)%>%
+  summarize(BasalDi = mean(BasalDiameter, na.rm = T),
+            CanopyDi = mean(CanopyDiameter, na.rm = T))%>%
+  mutate(biomass = exp((-2.9255) + 2.4109 * log(BasalDi)))%>% #in kg
+  #select(-BasalDi)%>%
+  mutate(area = pi*((CanopyDi/2)^2),
+         method = "Allometry")
+
+model <- nls(biomass ~ a * area^b,
+             data = SRGdat,
+             start = list(a = 0.1, b = 1)
+)
+
+#===============================================================================
+#predict polygon biomass from model above
+
+manu_output <- vect("../Data/GitData/canopypolys.shp")
+auto_output <- vect("../Data/testJiamingcrowns2.shp")
+survey_outline <- vect("../QGIS/100msurveybuffer.shp")
+
+manushp <- crop(manu_output, survey_outline)
+autoshp <- crop(auto_output, survey_outline)
+
+manushp$area <- expanse(manushp, unit = "m")
+autoshp$area <- expanse(autoshp, unit = "m")
+manudf <- as.data.frame(manushp)
+autodf <- as.data.frame(autoshp)
+manudf$predicted_biomass <- predict(model, newdata = manudf)
+autodf$predicted_biomass <- predict(model, newdata = autodf)
+obsdf$predicted_biomass <- predict(model, newdata = obsdf)
+
+
+manudf$method <- "Manual"
+autodf$method <- "Automatic"
+obsdf <- obsdf%>%
+  mutate(method = "Observed")%>%
+  rename(id = ID,
+         canopy_area = area)
+
+# Combine both into one data frame
+biomass_df <- bind_rows(manudf, autodf, obsdf)
+
+#plotting-------------------------------
+ggplot(biomass_df, aes(x = predicted_biomass, fill = method, color = method)) +
+  geom_histogram(aes(y = ..density..), alpha = 0.2, position = "identity", bins = 30) +
+  geom_density(alpha = 0.4, size = 1) +  # transparency here
+  scale_x_log10() +  # Optional: apply if skewed
+  scale_fill_viridis_d(option = "C") +
+  scale_color_viridis_d(option = "C") +
+  labs(x = "Predicted Biomass (kg, log scale)", y = "Density",
+       title = "",
+       fill = "Method", color = "Method") +
+  theme_minimal()+
+  theme(axis.text.x = element_text(size = 14),
+          axis.text.y = element_text(size = 14),
+          axis.title.x = element_text(size = 22),
+          axis.title.y = element_text(size = 22),
+        legend.text = element_text(size = 18),
+        legend.title = element_text(size = 18))
+
+
+```
+## Voxelization
+
+For the final biomass estimation method, we used voxelized a LiDAR point cloud data a cube size of 2.5 cm. Points were filtered to exclude noise and low-returns associated with grasses. Unlike the segmentation-based method, voxelization allowed us to estimate biomass across the entire area without requiring delineation of individual tree crowns.
+
+We applied a specific wood density of 0.78 g cm-3 (Chojnacky et al., 2013), to convert voxelized volume into woody biomass. Using this method, the total estimated biomass within the survey boundary was 46.9 Mg.
+
+It is important to note, however, that this method is highly sensitive to voxel resolution. For example, increasing the voxel side length to 5 cm resulted in a biomass estimate of 325.6 Mg. Further work is needed to understand the influence of voxel resolution on estimating biomass and what criteria is needed to select a voxel size.
+
+## Biometric Gradient Comparison
+
+After evaluating biomass estimation methods at the ecosystem scale, we narrowed our focus to a set of 10 individual trees spanning a wide range of heights, basal diameters, canopy diameters, and growth forms. We refer to these tree as the biometric gradient. For each tree, we estimated aboveground biomass using all available methods described above.
+
+Voxel-based estimates consistently produced higher biomass values compared to other approaches. In contrast, the automated crown detection method tended to output lower biomass estimates. The estimates from basal diameter and canopy diameter were generally similar. This was expected since both rely on the same allometric relationship.
+```{r}
+#| fig-align: center
+#| fig-width: 12
+#| fig-height: 8
+#Biometric Gradient Comparison: 5 biomass estimation methods
+library(dplyr)
+library(terra)
+library(tidyverse)
+
+SRGdat <-  read.csv("../Data/GitData/US-SRG_BiometGrad_07062025.csv")%>%
+  mutate(Site = "US-SRG")%>%
+  group_by(ID)%>%
+  summarize(BasalDi = mean(BasalDiameter, na.rm = T),
+            CanopyDi = mean(CanopyDiameter, na.rm = T))%>%
+  mutate(Basal_bio = exp((-2.9255) + 2.4109 * log(BasalDi)))%>% #in kg
+  mutate(area = pi*((CanopyDi/2)^2))
+
+model <- nls(Basal_bio ~ a * area^b,
+             data = SRGdat,
+             start = list(a = 0.1, b = 1))
+
+SRGdat$Canopy_bio <- predict(model, newdata = SRGdat)
+
+vox_est <- readRDS("../Data/biomet_vox_biomass.RDS")%>%
+  rename(Vox_bio = Biomass_kg)%>%
+  select(ID, Vox_bio)
+
+biomet_dat <- merge(SRGdat, vox_est, by = "ID")
+
+
+#-----canopy detection
+corrected_coords <- vect("../QGIS/SRGCorrectedTreePoints.shp")
+manu_polys <- vect("../Data/GitData/canopypolys.shp")
+auto_polys <- vect("../Data/testJiamingcrowns2.shp")
+survey_outline <- vect("../QGIS/100msurveybuffer.shp")
+
+manu_polys <- crop(manu_polys, survey_outline)
+auto_polys <- crop(auto_polys, survey_outline)
+
+corrected_coords <- project(corrected_coords, crs(manu_polys))
+
+if (!("polyID" %in% names(manu_polys)) || all(is.na(manu_polys$polyID))) {
+  manu_polys$polyID <- 1:nrow(manu_polys)
+}
+
+if (!("polyID" %in% names(auto_polys)) || all(is.na(auto_polys$polyID))) {
+  auto_polys$polyID <- 1:nrow(auto_polys)
+}
+
+manual_mapping <- data.frame(
+  TreeID = 1:10,
+  polyID = c(243, 248, 339, 335, 141, 142, 306, 26, 32, 3)
+)
+
+auto_mapping <- data.frame(
+  TreeID = c(1, 2, 7, 5, 4, 10, 8),
+  polyID = c(125, 221, 330, 334, 356, 243, 246)
+)
+
+match_points_to_polygons <- function(points, polygons, model, method_name, mapping = NULL) {
+  matched_polys <- list()
+  
+  for (i in seq_len(nrow(points))) {
+    matches <- which(relate(polygons, points[i], "intersects"))
+    if (length(matches) > 0) {
+      matched_polys[[i]] <- polygons[matches[1], ]
+    }
+  }
+  
+  if (length(matched_polys) == 0) return(data.frame())
+  
+  matched_vec <- do.call(rbind, matched_polys)
+  matched_vec$area <- expanse(matched_vec, unit = "m")
+  
+  if (!is.null(mapping)) {
+    df <- as.data.frame(matched_vec)
+    df <- df %>%
+      left_join(mapping, by = "polyID") %>%
+      rename(ID = TreeID)
+    matched_vec$ID <- df$ID
+  }
+  
+  df <- as.data.frame(matched_vec)
+  df$predicted_biomass <- predict(model, newdata = df)
+  df$method <- method_name
+  return(df)
+}
+
+manual_df <- match_points_to_polygons(
+  points = corrected_coords,
+  polygons = manu_polys,
+  model = model,
+  method_name = "Manual",
+  mapping = manual_mapping
+)
+
+man_df <- manual_df%>%
+  rename(manu_bio = predicted_biomass)%>%
+  select(ID, manu_bio)
+
+auto_df <- match_points_to_polygons(
+  points = corrected_coords,
+  polygons = auto_polys,
+  model = model,
+  method_name = "Automatic",
+  mapping = auto_mapping
+)
+
+
+auto_mapping <- data.frame(
+  BiometID = c(1, 2, 7, 5, 4, 10, 8),
+  treeID = c(125, 221, 330, 334, 356, 243, 246)
+)
+auto_df <- merge(auto_df, auto_mapping, by = "treeID")
+auto_df <- auto_df%>%
+  rename(auto_bio = predicted_biomass)%>%
+  select(BiometID, auto_bio)%>%
+  rename(ID = BiometID)
+
+candetection <- left_join(man_df, auto_df, by = "ID")
+
+
+#---------complete dataframe---------
+
+biomet_comp <- merge(biomet_dat, candetection, by = "ID")
+
+#---------plot------------------------------------------------------------------
+biomet_long <- biomet_comp %>%
+  pivot_longer(
+    cols = ends_with("_bio"),
+    names_to = "method",
+    values_to = "biomass"
+  ) %>%
+  mutate(method = recode(method,
+                         Basal_bio = "Basal Diameter",
+                         Canopy_bio = "Canopy Area",
+                         manu_bio = "Manual Crown",
+                         auto_bio = "Automated Crown",
+                         Vox_bio = "Voxelization"),
+         method = factor(method, levels = c("Basal Diameter", "Canopy Area", "Manual Crown", "Automated Crown", "Voxelization")))
+
+ggplot(biomet_long, aes(x = factor(ID), y = biomass, fill = method)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.7) +
+  scale_fill_viridis_d(option = "D", end = 0.85, name = "Method:") +
+  labs(x = "Tree ID", y = "Biomass (kg)", title = "") +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    legend.position = "bottom",
+    axis.text.x = element_text(size = 14),
+          axis.text.y = element_text(size = 14),
+          axis.title.x = element_text(size = 22),
+          axis.title.y = element_text(size = 22),
+        legend.text = element_text(size = 18),
+        legend.title = element_text(size = 18)
+  )
+```
+## Biomass Products
+
+Direct comparison between the biomass estimates from the methods explored above and existing biomass products is challenging due to the differences in temporal coverage and original spatial resolution. We compare them regardless and observe substantial variability across both fine and large scale approaches. 
+```{r}
+#| fig-align: center
+#| fig-width: 10
+#| fig-height: 8
+library(dplyr)
+library(ggplot2)
+library(terra)
+
+# Read and prepare external product data
+biomassprods <- read.csv("../Data/AnnualBiomassProducts.csv") %>%
+  select(-ffp_radius)
+
+summary_bio <- biomassprods %>%
+  filter(SITE_ID == "US-SRG") %>%
+  group_by(product) %>%
+  summarise(
+    max_bio = max(agb_Mg_ha, na.rm = TRUE),
+    mean_bio = mean(agb_Mg_ha, na.rm = TRUE),
+    recent_year = max(year, na.rm = TRUE),
+    recent_bio = agb_Mg_ha[year == recent_year][1],
+    .groups = "drop"
+  ) %>%
+  filter(!is.na(recent_bio)) %>%
+  mutate(
+    is_zero = recent_bio == 0,
+    plot_biomass = ifelse(is_zero, 0.1, recent_bio),
+    source = "Product"
+  )
+
+# Survey area from shapefile
+survey_outline <- vect("../QGIS/100msurveybuffer.shp")
+area_m2 <- expanse(survey_outline, unit = "m")
+area_ha <- area_m2 / 10000
+total_area_ha <- sum(area_ha)
+
+# SRG estimates
+srg_bio <- data.frame(
+  product = c("basal area", "canopy area", "manual crown", "automated crown", "voxelization"),
+  agb_Mg = c(12.66, 11.7, 18.0, 3.8, 46.9),
+  recent_year = 2025
+) %>%
+  mutate(
+    recent_bio = agb_Mg / total_area_ha,  # Convert to Mg/ha
+    is_zero = recent_bio == 0,
+    plot_biomass = ifelse(is_zero, 0.1, recent_bio),
+    source = "Report Estimate",
+    recent_year = as.character(recent_year)
+  )
+
+# Combine
+combined_bio <- bind_rows(
+  summary_bio %>% select(product, recent_bio, recent_year, plot_biomass, source),
+  srg_bio %>% select(product, recent_bio, recent_year, plot_biomass, source)
+) %>%
+  mutate(product_year = paste0(product, " (", recent_year, ")"))
+
+# Plot
+ggplot(combined_bio, aes(x = reorder(product_year, -plot_biomass), y = plot_biomass, fill = source)) +
+  geom_col(alpha = 0.9, position = position_dodge(width = 0.7), width = 0.6) +
+  scale_fill_manual(values = c("Product" = "skyblue", "Report Estimate" = "forestgreen")) +  # teal & pink
+  labs(
+    title = "",
+    x = "Product (Most Recent Year)",
+    y = "AGB (Mg/ha)",
+    fill = ""
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(size = 18),
+          axis.text.y = element_text(size = 18),
+          axis.title.x = element_text(size = 22),
+          axis.title.y = element_text(size = 22),
+        legend.text = element_text(size = 20),
+  )+
+  coord_flip()
+```

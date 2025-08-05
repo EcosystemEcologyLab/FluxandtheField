@@ -29,12 +29,12 @@ avg_census_dat <- census_dat%>%
             CrownDiameter = mean(CrownDiameter, na.rm = T),
             Height = Height)%>%
   filter(Species != "",
-         Distance < 60)%>%
+         Distance <= 60)%>%
   mutate(Area = pi*((CrownDiameter/2)^2))%>%
   arrange(Quadrant, Species)
 
 stats <- avg_census_dat %>%
-  group_by(Quadrant, Species) %>%
+  group_by(Species, Quadrant) %>%
   summarise(
     MeanHeight = mean(Height, na.rm = TRUE),
     SdHeight = sd(Height, na.rm = TRUE),
@@ -43,12 +43,11 @@ stats <- avg_census_dat %>%
     MeanArea = mean(Area, na.rm = TRUE),
     SdArea = sd(Area, na.rm = TRUE),
     Plants = n(),
-    PercentCover = sum(Area) / (((60^2) * pi) / 4)*100,
-    Density = Plants * 10000 / (((60^2) * pi) / 4),
+    PercentCover = (sum(Area) / ((60^2) * (pi/4)))*100,
+    Density = (Plants / ((60^2) * (pi/4)))*10000, #density per hectare
     .groups = "drop"
   ) %>%
-  mutate(across(where(is.numeric), ~ round(.x, 2)))
-
+  mutate(across( -Density,~ if(is.numeric(.x)) round(.x, 2) else .x), Density = round(Density, 4))
 #===============================================================================
 #Format 2014 data---------------------------------------------------------------
 #===============================================================================
@@ -56,14 +55,14 @@ russ_data <- read.csv("./Data/GitData/SRG_WoodyCover_Oct_2014.csv")
 avg_russ_data <- russ_data%>%
   group_by(CW_from_bearing)%>%
   mutate(Ht..cm. = Ht..cm./100,
-         Diam..cm./100)%>%
+         Diam..cm. = Diam..cm./100)%>%
   rename(Species = Plant,
          Quadrant = CW_from_bearing,
          Distance = Dist..m.,
          Height = Ht..cm.,
          CrownDiameter = Diam..cm.,
          Area = Area..m2.)%>%
-  filter(Distance < 60)%>%
+  filter(Distance <= 60)%>%
   #mutate(Area = pi*((CrownDiameter/2)^2))%>%
   arrange(Quadrant, Species)
 
@@ -73,8 +72,8 @@ russ_stats <- avg_russ_data %>%
   summarise(
     MeanHeight = mean(Height, na.rm = TRUE),
     SdHeight = sd(Height, na.rm = TRUE),
-    MeanCanDi = mean(CrownDiameter, na.rm = TRUE)/100,
-    SdCanDi = sd(CrownDiameter, na.rm = TRUE)/100,
+    MeanCanDi = mean(CrownDiameter, na.rm = TRUE),
+    SdCanDi = sd(CrownDiameter, na.rm = TRUE),
     MeanArea = mean(Area, na.rm = TRUE),
     SdArea = sd(Area, na.rm = TRUE),
     Plants = n(),
@@ -170,3 +169,120 @@ p2 <- ggplot(extra_long, aes(x = Quadrant, y = Value, fill = Survey)) +
 
 #combine plots
 p1 / p2
+
+
+#===============================================================================
+#Calc stats for full survey, not by quad----------------------------------------
+#===============================================================================
+# 2025 full summary (remove Quadrant group)
+full_stats_2025 <- avg_census_dat %>%
+  group_by(Species) %>%
+  summarise(
+    MeanHeight = mean(Height, na.rm = TRUE),
+    SdHeight = sd(Height, na.rm = TRUE),
+    MeanCanDi = mean(CrownDiameter, na.rm = TRUE),
+    SdCanDi = sd(CrownDiameter, na.rm = TRUE),
+    MeanArea = mean(Area, na.rm = TRUE),
+    SdArea = sd(Area, na.rm = TRUE),
+    Plants = n(),
+    PercentCover = (sum(Area) / (pi * 60^2)) * 100,
+    Density = (Plants / (pi * 60^2)) * 10000,  # per hectare
+    .groups = "drop"
+  ) %>%
+  mutate(Survey = "2025") %>%
+  mutate(across(-Density, ~ if(is.numeric(.x)) round(.x, 2) else .x), Density = round(Density, 4))
+# 2014 full summary (remove Quadrant group)
+full_stats_2014 <- avg_russ_data %>%
+  group_by(Species) %>%
+  summarise(
+    MeanHeight = mean(Height, na.rm = TRUE),
+    SdHeight = sd(Height, na.rm = TRUE),
+    MeanCanDi = mean(CrownDiameter, na.rm = TRUE),
+    SdCanDi = sd(CrownDiameter, na.rm = TRUE),
+    MeanArea = mean(Area, na.rm = TRUE),
+    SdArea = sd(Area, na.rm = TRUE),
+    Plants = n(),
+    PercentCover = (sum(Area) / (pi * 60^2)) * 100,
+    Density = (Plants / (pi * 60^2)) * 10000,
+    .groups = "drop"
+  ) %>%
+  mutate(Survey = "2014") %>%
+  mutate(across(where(is.numeric), ~ round(.x, 2)))
+full_combined_stats <- bind_rows(full_stats_2014, full_stats_2025)
+full_combined_stats <- full_combined_stats %>%
+  mutate(Species = recode(Species,
+                          "WAC"  = "ACA",
+                          "BRTB" = "BURB",
+                          "CHAC" = "CATC",
+                          "GTN"  = "GRTH",
+                          "DW"   = "SALIX"))
+
+#===============================================================================
+#Plot full survey comparisons---------------------------------------------------
+#===============================================================================
+survey_summary <- full_combined_stats %>%
+  group_by(Survey) %>%
+  summarise(
+    TotalPlants = sum(Plants, na.rm = TRUE),
+    TotalCover = sum(PercentCover, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+survey_long <- survey_summary %>%
+  pivot_longer(cols = c(TotalPlants, TotalCover), names_to = "Metric", values_to = "Value")
+
+ggplot(survey_long, aes(x = Survey, y = Value, fill = Survey)) +
+  geom_col(position = position_dodge(), width = 0.6) +
+  facet_wrap(~ Metric, scales = "free_y") +
+  scale_fill_manual(values = c("2014" = "#91bfdb", "2025" = "#fc8d59")) +
+  labs(
+    title = "Total Plant Counts and Percent Cover per Survey",
+    x = "",
+    y = "",
+    fill = "Survey"
+  ) +
+  theme_minimal() +
+  theme(
+    strip.text = element_text(size = 11, face = "bold"),
+    axis.text.x = element_text(size = 10)
+  )
+species_summary <- full_combined_stats %>%
+  select(Species, Survey, Plants, PercentCover)
+
+species_long <- species_summary %>%
+  pivot_longer(cols = c(Plants, PercentCover), names_to = "Metric", values_to = "Value")
+
+ggplot(species_long, aes(x = reorder(Species, -Value), y = Value, fill = Survey)) +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6) +
+  facet_wrap(~ Metric, scales = "free_y", ncol = 1) +
+  scale_fill_manual(values = c("2014" = "#91bfdb", "2025" = "#fc8d59")) +
+  labs(
+    title = "Species-level Comparison of Plant Counts and Cover",
+    x = "Species",
+    y = "",
+    fill = "Survey"
+  ) +
+  theme_minimal() +
+  theme(
+    strip.text = element_text(size = 11, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+diff_df <- full_combined_stats %>%
+  select(Species, Survey, Plants, PercentCover) %>%
+  pivot_wider(names_from = Survey, values_from = c(Plants, PercentCover)) %>%
+  mutate(
+    PlantDiff = Plants_2025 - Plants_2014,
+    CoverDiff = PercentCover_2025 - PercentCover_2014
+  )
+
+ggplot(diff_df, aes(x = reorder(Species, -PlantDiff), y = PlantDiff)) +
+  geom_col(fill = "#fc8d59") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(
+    title = "Change in Plant Counts (2025 - 2014)",
+    x = "Species",
+    y = "Change in Number of Plants"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+

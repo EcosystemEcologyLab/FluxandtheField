@@ -1,4 +1,4 @@
-#Update: https://ecosystemecologylab.github.io/FluxandtheField/BiomassReport.html
+#Update:https://ecosystemecologylab.github.io/FluxandtheField/BiomassReport.html?nocache=20250814
 # FluxandtheField
 
 **FluxandtheField** contains code and figures used to analyze field-based vegetation data, drone imagery, and eddy covariance flux data collected at the **US-SRM** and **US-SRG** AmeriFlux sites, located at the **Santa Rita Experimental Range (SRER)** in southern Arizona.

@@ -8,7 +8,7 @@
 
 <meta name="author" content="Lindsey Bell">
 
-<title>Biomass Report 8/1/2025</title>
+<title>Biomass Report</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -46,7 +46,7 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Biomass Report 8/1/2025</h1>
+<h1 class="title">Biomass Report</h1>
 </div>
 
 
@@ -67,8 +67,623 @@ ul.task-list li input[type="checkbox"] {
 
 </header>
 
-<section id="report-overview" class="level2">
-<h2 class="anchored" data-anchor-id="report-overview">Report Overview</h2>
+<section id="update-8142025" class="level1">
+<h1>Update 8/14/2025</h1>
+<section id="overview" class="level2">
+<h2 class="anchored" data-anchor-id="overview">Overview</h2>
+<p>This report presents additional exploration of biomass estimates derived from canopy area measurements, with a focus on - Refining the parameterization of the canopy segmentation algorithm - Characterizing errors associated with that algorithm ## Canopy Area Allometric Model We modeled a simple allometric relationship between canopy area and aboveground biomass by extending the previously established relationship between diameter at root crown and biomass for mesquite trees. Model parameters were derived from observations at the site’s biometric gradient. The model is non-linear, causing larger tree canopies to disproportionately impact the total site biomass compared to smaller canopies. Biomass estimates throughout the remainder of this update are predicted from this model.</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="BiomassReport_files/figure-html/unnamed-chunk-1-1.png" class="img-fluid figure-img" width="768"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="latin-hypercube-sampling" class="level2">
+<h2 class="anchored" data-anchor-id="latin-hypercube-sampling">Latin Hypercube Sampling</h2>
+<p>Latin hypercube sampling (LHS) is a stratified sampling technique that efficiently explores multiple parameter combinations by evenly representing each parameter range across the set of samples. We used LHS to evaluate 3,000 combinations of eight parameters used in the tree detection/canopy segmentation algorithms. For each parameter combination, we fit a lognormal distribution to the automatically delineated canopy areas and calculated the log-likelihood of the manually measured canopy areas. We also calculated the median canopy area difference, Kolmogorov-Smirnov (KS) statistic, and tree count difference to assess performance.</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="BiomassReport_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid figure-img" width="960"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>We filtered the parameter sets and only kept those meeting the following criteria (in a comparison of the manual and auto delineated canopies): - median canopy area difference &lt; 5 m2 - tree count difference &lt; 50 - canopy area distribution overlap &gt; 84% - KS test D value &lt; 0.3 (p value &lt; 0.05) Then, we chose the 300 parameter sets with the highest log likelihood values to characterize the variability in modeled canopy area, tree count, and canopy cover.</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="BiomassReport_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid figure-img" width="768"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>We compared three metrics derived from delineated canopies and from field observations. Manual delineations overpredicted biomass by 64%, overpredicted canopy cover by 21%, and underpredicted tree count by 30% relative to field observations. The automated model performed similarly, overpredicting biomass by 40%, overpredicting canopy cover by 20%, and underpredicting tree count by 35%. The automated and manually delineated estimates aligned closely, but deviated noticeably from field totals.</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+
+<div id="ywfyncgasj" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#ywfyncgasj table {
+  font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#ywfyncgasj thead, #ywfyncgasj tbody, #ywfyncgasj tfoot, #ywfyncgasj tr, #ywfyncgasj td, #ywfyncgasj th {
+  border-style: none;
+}
+
+#ywfyncgasj p {
+  margin: 0;
+  padding: 0;
+}
+
+#ywfyncgasj .gt_table {
+  display: table;
+  border-collapse: collapse;
+  line-height: normal;
+  margin-left: auto;
+  margin-right: auto;
+  color: #333333;
+  font-size: 16px;
+  font-weight: normal;
+  font-style: normal;
+  background-color: #FFFFFF;
+  width: auto;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #A8A8A8;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #A8A8A8;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+}
+
+#ywfyncgasj .gt_caption {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+#ywfyncgasj .gt_title {
+  color: #333333;
+  font-size: 125%;
+  font-weight: initial;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-color: #FFFFFF;
+  border-bottom-width: 0;
+}
+
+#ywfyncgasj .gt_subtitle {
+  color: #333333;
+  font-size: 85%;
+  font-weight: initial;
+  padding-top: 3px;
+  padding-bottom: 5px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-color: #FFFFFF;
+  border-top-width: 0;
+}
+
+#ywfyncgasj .gt_heading {
+  background-color: #FFFFFF;
+  text-align: center;
+  border-bottom-color: #FFFFFF;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#ywfyncgasj .gt_bottom_border {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#ywfyncgasj .gt_col_headings {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#ywfyncgasj .gt_col_heading {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+  overflow-x: hidden;
+}
+
+#ywfyncgasj .gt_column_spanner_outer {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+#ywfyncgasj .gt_column_spanner_outer:first-child {
+  padding-left: 0;
+}
+
+#ywfyncgasj .gt_column_spanner_outer:last-child {
+  padding-right: 0;
+}
+
+#ywfyncgasj .gt_column_spanner {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  overflow-x: hidden;
+  display: inline-block;
+  width: 100%;
+}
+
+#ywfyncgasj .gt_spanner_row {
+  border-bottom-style: hidden;
+}
+
+#ywfyncgasj .gt_group_heading {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  text-align: left;
+}
+
+#ywfyncgasj .gt_empty_group_heading {
+  padding: 0.5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#ywfyncgasj .gt_from_md > :first-child {
+  margin-top: 0;
+}
+
+#ywfyncgasj .gt_from_md > :last-child {
+  margin-bottom: 0;
+}
+
+#ywfyncgasj .gt_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin: 10px;
+  border-top-style: solid;
+  border-top-width: 1px;
+  border-top-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  overflow-x: hidden;
+}
+
+#ywfyncgasj .gt_stub {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#ywfyncgasj .gt_stub_row_group {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+  vertical-align: top;
+}
+
+#ywfyncgasj .gt_row_group_first td {
+  border-top-width: 2px;
+}
+
+#ywfyncgasj .gt_row_group_first th {
+  border-top-width: 2px;
+}
+
+#ywfyncgasj .gt_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#ywfyncgasj .gt_first_summary_row {
+  border-top-style: solid;
+  border-top-color: #D3D3D3;
+}
+
+#ywfyncgasj .gt_first_summary_row.thick {
+  border-top-width: 2px;
+}
+
+#ywfyncgasj .gt_last_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#ywfyncgasj .gt_grand_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#ywfyncgasj .gt_first_grand_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: double;
+  border-top-width: 6px;
+  border-top-color: #D3D3D3;
+}
+
+#ywfyncgasj .gt_last_grand_summary_row_top {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-style: double;
+  border-bottom-width: 6px;
+  border-bottom-color: #D3D3D3;
+}
+
+#ywfyncgasj .gt_striped {
+  background-color: rgba(128, 128, 128, 0.05);
+}
+
+#ywfyncgasj .gt_table_body {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#ywfyncgasj .gt_footnotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#ywfyncgasj .gt_footnote {
+  margin: 0px;
+  font-size: 90%;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#ywfyncgasj .gt_sourcenotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#ywfyncgasj .gt_sourcenote {
+  font-size: 90%;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#ywfyncgasj .gt_left {
+  text-align: left;
+}
+
+#ywfyncgasj .gt_center {
+  text-align: center;
+}
+
+#ywfyncgasj .gt_right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#ywfyncgasj .gt_font_normal {
+  font-weight: normal;
+}
+
+#ywfyncgasj .gt_font_bold {
+  font-weight: bold;
+}
+
+#ywfyncgasj .gt_font_italic {
+  font-style: italic;
+}
+
+#ywfyncgasj .gt_super {
+  font-size: 65%;
+}
+
+#ywfyncgasj .gt_footnote_marks {
+  font-size: 75%;
+  vertical-align: 0.4em;
+  position: initial;
+}
+
+#ywfyncgasj .gt_asterisk {
+  font-size: 100%;
+  vertical-align: 0;
+}
+
+#ywfyncgasj .gt_indent_1 {
+  text-indent: 5px;
+}
+
+#ywfyncgasj .gt_indent_2 {
+  text-indent: 10px;
+}
+
+#ywfyncgasj .gt_indent_3 {
+  text-indent: 15px;
+}
+
+#ywfyncgasj .gt_indent_4 {
+  text-indent: 20px;
+}
+
+#ywfyncgasj .gt_indent_5 {
+  text-indent: 25px;
+}
+
+#ywfyncgasj .katex-display {
+  display: inline-flex !important;
+  margin-bottom: 0.75em !important;
+}
+
+#ywfyncgasj div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+  height: 0px !important;
+}
+</style>
+<table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+  <thead>
+    <tr class="gt_heading">
+      <td colspan="4" class="gt_heading gt_title gt_font_normal gt_bottom_border" style="">Comparison of Canopy Metrics Across Methods</td>
+    </tr>
+    
+    <tr class="gt_col_headings">
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" style="font-weight: bold;" scope="col" id="Metric">Metric</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" style="font-weight: bold;" scope="col" id="Method">Method</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" style="font-weight: bold;" scope="col" id="Median">Median</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" style="font-weight: bold;" scope="col" id="IQR">IQR (25–75%)</th>
+    </tr>
+  </thead>
+  <tbody class="gt_table_body">
+    <tr><td headers="Metric" class="gt_row gt_left">Canopy Cover (%)</td>
+<td headers="Method" class="gt_row gt_center">Manual_Detection</td>
+<td headers="Median" class="gt_row gt_right">24.03</td>
+<td headers="IQR" class="gt_row gt_left">NA</td></tr>
+    <tr><td headers="Metric" class="gt_row gt_left">Number of Trees</td>
+<td headers="Method" class="gt_row gt_center">Manual_Detection</td>
+<td headers="Median" class="gt_row gt_right">442.00</td>
+<td headers="IQR" class="gt_row gt_left">NA</td></tr>
+    <tr><td headers="Metric" class="gt_row gt_left">Total Biomass (Mg/ha)</td>
+<td headers="Method" class="gt_row gt_center">Manual_Detection</td>
+<td headers="Median" class="gt_row gt_right">5.94</td>
+<td headers="IQR" class="gt_row gt_left">NA</td></tr>
+    <tr><td headers="Metric" class="gt_row gt_left">Canopy Cover (%)</td>
+<td headers="Method" class="gt_row gt_center">Field_Observations</td>
+<td headers="Median" class="gt_row gt_right">19.88</td>
+<td headers="IQR" class="gt_row gt_left">NA</td></tr>
+    <tr><td headers="Metric" class="gt_row gt_left">Number of Trees</td>
+<td headers="Method" class="gt_row gt_center">Field_Observations</td>
+<td headers="Median" class="gt_row gt_right">634.00</td>
+<td headers="IQR" class="gt_row gt_left">NA</td></tr>
+    <tr><td headers="Metric" class="gt_row gt_left">Total Biomass (Mg/ha)</td>
+<td headers="Method" class="gt_row gt_center">Field_Observations</td>
+<td headers="Median" class="gt_row gt_right">3.62</td>
+<td headers="IQR" class="gt_row gt_left">NA</td></tr>
+    <tr><td headers="Metric" class="gt_row gt_left">Canopy Cover (%)</td>
+<td headers="Method" class="gt_row gt_center">Auto_Detection</td>
+<td headers="Median" class="gt_row gt_right">23.87</td>
+<td headers="IQR" class="gt_row gt_left">21.86–25.18</td></tr>
+    <tr><td headers="Metric" class="gt_row gt_left">Total Biomass (Mg/ha)</td>
+<td headers="Method" class="gt_row gt_center">Auto_Detection</td>
+<td headers="Median" class="gt_row gt_right">5.06</td>
+<td headers="IQR" class="gt_row gt_left">4.17–5.7</td></tr>
+    <tr><td headers="Metric" class="gt_row gt_left">Number of Trees</td>
+<td headers="Method" class="gt_row gt_center">Auto_Detection</td>
+<td headers="Median" class="gt_row gt_right">413.00</td>
+<td headers="IQR" class="gt_row gt_left">403–425</td></tr>
+  </tbody>
+  
+  
+</table>
+</div>
+</div>
+</div>
+<p>We also selected the parameter set with the highest log-likelihood value from the top 300 parameter sets to characterize canopies at the site and to compare results to the manual delineations and field observations. This set of parameters slightly underestimates larger canopies (blue), but detects more clumps of smaller canopies.</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="BiomassReport_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="576"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>We compare distributions of canopy area and height for the field observations, manually delineated canopies, and automatically delineated canopies (using the top parameter set). Field observations contained a higher proportion of small canopy areas compared to the delineated canopy datasets. Additionally, the height distribution from the observed data was more uniform, exhibiting a more gradual incline compared to the steeper distribution observed in the delineated canopies.</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="BiomassReport_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="768"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="canopy-errors" class="level2">
+<h2 class="anchored" data-anchor-id="canopy-errors">Canopy Errors</h2>
+<p>Due to the substantial differences in trees detected, biomass, and canopy area between the observed and delineated canopies, we investigated sources of error. We attribute the under-performance of the canopy delineations to two types of error: - Detection error: inaccuracies in identifying the presence or absence of a tree. - Segmentation error: inaccuracies in defining individual canopy boundaries, such as merging multiple canopies into one or fragmenting a single canopy into several parts. Detection errors primarily affect small trees, since large trees naturally occupy more area and have denser canopies, making them more likely to be detected. Because small trees are abundant at the site, a model’s ability to detect canopies below a certain size threshold can cause substantial variability in the total number of individuals recorded. However, while small-canopied trees contribute largely to tree counts, their contribution to total biomass is minimal until a considerable number of these canopies are left undetected.</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="BiomassReport_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid figure-img" width="960"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Given the large discrepancy in tree counts between the delineations and field observations, we investigated the role of errors associated with segmentation. We randomly split manually delineated canopies one to four times to match the total number of observed canopies and examined the resulting distribution. Larger trees had a higher probability of being composed of multiple merged canopies. Because the allometric relationship between canopy area and biomass is nonlinear, the accidental merging of multiple canopies produces artificially large canopies that can disproportionately inflate total biomass estimates for the site. Conversely, randomly segmenting canopies to create a distribution more similar to field observations increases tree counts while reducing total biomass.</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="BiomassReport_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="960"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Although tree presence can be reliably determined in the field, canopy area measurements are more uncertain due to irregular canopy shapes. Standard field practice involves measuring the major and minor axes of the canopy, but these axes can be difficult to accurately and quickly identify from the ground. As a result, measurement error is introduced depending on the angles at which canopy diameters are assessed. Variability in canopy area estimates is associated with both the size and shape of the canopy.</p>
+<p>We used the modeled tree canopy polygons and generated major and minor axis diameter measurements for 18 directions within each polygon. As size increases, so does the error of the directional estimate</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="BiomassReport_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="768"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Likewise, we used these canopy polygons to assess the error associated with canopies of irregular shapes (i.e., deviation from a smooth ellipse). As the canopy shape deviates from an ellipse, irregularity increases, and error increases.</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="BiomassReport_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img" width="768"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="update-812025" class="level1">
+<h1>Update 8/1/2025</h1>
+<section id="overview-1" class="level2">
+<h2 class="anchored" data-anchor-id="overview-1">Overview</h2>
 <p>Recent field surveys and drone flights at the US-SRG flux site enabled an exploration of woody biomass estimation methods at fine and coarse spatial scales. In this report, we estimated woody biomass using three approaches:</p>
 <ul>
 <li>Allometric equations based on field-measured basal diameter</li>
@@ -90,7 +705,7 @@ ul.task-list li input[type="checkbox"] {
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="BiomassReport_files/figure-html/unnamed-chunk-1-1.png" class="img-fluid figure-img" width="768"></p>
+<p><img src="BiomassReport_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid figure-img" width="768"></p>
 </figure>
 </div>
 </div>
@@ -113,7 +728,7 @@ ul.task-list li input[type="checkbox"] {
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="BiomassReport_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid figure-img" width="1440"></p>
+<p><img src="BiomassReport_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid figure-img" width="1440"></p>
 </figure>
 </div>
 </div>
@@ -126,7 +741,7 @@ ul.task-list li input[type="checkbox"] {
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="BiomassReport_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid figure-img" width="960"></p>
+<p><img src="BiomassReport_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid figure-img" width="960"></p>
 <figcaption class="figure-caption">Left: 0.5-m canopy height model (CHM) within 100m of the US-SRG flux tower. White circles represent automatically detected treetops. Yellow colors on the CHM indicate large values while purple colors indicate small values. Right: Difference in canopy areas between the automatically and manually detected canopies for canopies within the field survey boundary (~100m around the US-SRG tower). Blue represents an underprediction and red represents on overprediction of canopy area by the automatic detection.</figcaption>
 </figure>
 </div>
@@ -140,7 +755,7 @@ ul.task-list li input[type="checkbox"] {
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="BiomassReport_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid figure-img" width="960"></p>
+<p><img src="BiomassReport_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid figure-img" width="960"></p>
 </figure>
 </div>
 </div>
@@ -160,7 +775,7 @@ ul.task-list li input[type="checkbox"] {
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="BiomassReport_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="1152"></p>
+<p><img src="BiomassReport_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid figure-img" width="1152"></p>
 </figure>
 </div>
 </div>
@@ -173,11 +788,12 @@ ul.task-list li input[type="checkbox"] {
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="BiomassReport_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="960"></p>
+<p><img src="BiomassReport_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid figure-img" width="960"></p>
 </figure>
 </div>
 </div>
 </div>
+</section>
 </section>
 
 </main>

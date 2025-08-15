@@ -1,5 +1,5 @@
 ---
-title: "Biomass Report 8/1/2025"
+title: "Biomass Report"
 author: "Lindsey Bell"
 format: html
 editor: visual
@@ -8,8 +8,1006 @@ message: false
 warning: false
 output-dir: docs
 ---
+# Update 8/14/2025
+## Overview
+This report presents additional exploration of biomass estimates derived from canopy area measurements, with a focus on
+-   Refining the parameterization of the canopy segmentation algorithm
+-   Characterizing errors associated with that algorithm
+## Canopy Area Allometric Model
+We modeled a simple allometric relationship between canopy area and aboveground biomass by extending the previously established relationship between diameter at root crown and biomass for mesquite trees. Model parameters were derived from observations at the site's biometric gradient. The model is non-linear, causing larger tree canopies to disproportionately impact the total site biomass compared to smaller canopies. Biomass estimates throughout the remainder of this update are predicted from this model.
+```{r}
+#| fig-align: center
+#| fig-width: 8
+#| fig-height: 4
 
-## Report Overview
+library(dplyr)
+library(ggplot2)
+
+SRGdat <-  read.csv("../Data/GitData/US-SRG_BiometGrad_07062025.csv")%>%
+  #mutate(Site = "US-SRG")%>%
+  group_by(ID)%>%
+  summarize(BasalDi = mean(BasalDiameter, na.rm = T),
+            CanopyDi = mean(CanopyDiameter, na.rm = T))%>%
+  mutate(biomass = exp((-2.9255) + 2.4109 * log(BasalDi)))%>% #in kg
+  #select(-BasalDi)%>%
+  mutate(area = pi*((CanopyDi/2)^2),
+         method = "Allometry")
+
+model <- nls(biomass ~ a * area^b,
+             data = SRGdat,
+             start = list(a = 0.1, b = 1)
+)
+
+
+#coeffs
+a_val <- unname(coef(model)["a"])
+b_val <- unname(coef(model)["b"])
+
+eq_label <- bquote(y == .(round(a_val, 3)) ~ x^.(round(b_val, 3)))
+#equn label string
+eq_label <- bquote(y == .(round(a_val, 3)) ~ x^.(round(b_val, 3)))
+
+ggplot(SRGdat, aes(x = area, y = biomass)) +
+  geom_point() +
+  stat_function(fun = function(x) {
+    a_val * x^b_val
+  }, color = "lightblue", size = 1) +
+  annotate("text", 
+           x = max(SRGdat$area) * 0.7, 
+           y = max(SRGdat$biomass) * 0.9, 
+           label = as.expression(eq_label),
+           parse = TRUE,
+           size = 5) +
+  theme_minimal() +
+  labs(
+    title = "",
+    y = "Biomass (kg)",
+    x = "Canopy Area (m2)"
+  )+
+  theme(axis.text.x = element_text(size = 12),
+          axis.text.y = element_text(size = 12),
+          axis.title.x = element_text(size = 14.5),
+          axis.title.y = element_text(size = 14.5))
+
+```
+## Latin Hypercube Sampling
+Latin hypercube sampling (LHS) is a stratified sampling technique that efficiently explores multiple parameter combinations by evenly representing each parameter range across the set of samples. We used LHS to evaluate 3,000 combinations of eight parameters used in the tree detection/canopy segmentation algorithms. For each parameter combination, we fit a lognormal distribution to the automatically delineated canopy areas and calculated the log-likelihood of the manually measured canopy areas. We also calculated the median canopy area difference, Kolmogorov-Smirnov (KS) statistic, and tree count difference to assess performance.
+```{r}
+#| fig-align: center
+#| fig-width: 10
+#| fig-height: 12
+library(tidyverse)
+library(ggplot2)
+library(patchwork)
+
+results_df <- readRDS("../Data/lhs_parameterization_3000results_withdlnorm.rds")
+
+#params
+param_cols <- c("a", "b", "floor_thresh", "floor_val", 
+                "th_tree", "th_seed", "th_cr", "max_cr")
+
+#bin values
+bin_param <- function(x, width) round(x / width) * width
+
+# apply binning
+results_clean <- results_df %>%
+  mutate(
+    a             = bin_param(a, 0.1),
+    b             = bin_param(b, 0.1),
+    floor_thresh  = bin_param(floor_thresh, 0.2),
+    th_seed       = bin_param(th_seed, 0.2),
+    th_cr         = bin_param(th_cr, 0.2),
+    floor_val     = bin_param(floor_val, 0.3),
+    th_tree       = bin_param(th_tree, 0.5),
+    max_cr        = round(max_cr)  # integer
+  )
+
+# Define fig labels and source
+output_vars <- c("overlap", "count_diff", "median_diff", "D")
+yaxis_titles <- c("Overlap", "Crown Difference", "Median Difference", "KS Test")
+
+param_labels <- c(
+  a = "Slope",
+  b = "Intercept",
+  floor_thresh = "Min Height",
+  floor_val = "Default Size",
+  th_tree = "Min Treetop",
+  th_seed = "Min Seed",
+  th_cr = "Crown Ratio",
+  max_cr = "Max Crown"
+)
+
+# Make plots
+plot_list <- list()
+
+for (i in seq_along(output_vars)) {
+  output_var <- output_vars[i]
+  y_title <- yaxis_titles[i]
+  
+  param_long <- results_clean %>%
+    pivot_longer(cols = all_of(param_cols),
+                 names_to = "parameter", values_to = "param_value") %>%
+    select(parameter, param_value, all_of(output_var)) %>%
+    rename(output_value = all_of(output_var))
+  
+  # Ensure numeric ordering on x-axis
+  param_long$param_value <- factor(param_long$param_value, 
+                                   levels = sort(unique(as.numeric(param_long$param_value))))
+  
+  p <- ggplot(param_long, aes(x = param_value, y = output_value)) +
+    geom_boxplot(fill = "lightblue", alpha = 0.8) +
+    facet_wrap(~parameter, scales = "free_x",
+               labeller = as_labeller(param_labels)) +
+    labs(x = "", y = y_title) +
+    theme_minimal(base_size = 14) +
+    theme(axis.text.x = element_text(size = 16, angle = 60, hjust = 1),
+          axis.text.y = element_text(size = 14),
+          strip.text = element_text(size = 16),
+          axis.title.y = element_text(size = 16))
+  
+  plot_list[[i]] <- p
+}
+
+combined_plot <- wrap_plots(plotlist = plot_list, ncol = 2)
+combined_plot
+```
+We filtered the parameter sets and only kept those meeting the following criteria (in a comparison of the manual and auto delineated canopies):
+-   median canopy area difference \< 5 m2
+-   tree count difference \< 50
+-   canopy area distribution overlap \> 84%
+-   KS test D value \< 0.3 (p value \< 0.05)
+Then, we chose the 300 parameter sets with the highest log likelihood values to characterize the variability in modeled canopy area, tree count, and canopy cover.
+```{r}
+#| fig-align: center
+#| fig-width: 8
+#| fig-height: 4
+
+library(dplyr)
+library(tidyr)
+library(ggplot2) 
+
+results_df <- readRDS("../Data/lhs_parameterization_3000results_withdlnorm.rds")
+
+opt_params <- results_df %>%
+  filter(median_diff < 5,
+         overlap > 0.84,
+         count_diff < 50,
+         D < 0.3,
+         p_value < 0.05) %>%
+  arrange(desc(log_likelihood))
+
+topparams <- opt_params[1:300,]
+lhs_results <- topparams
+
+summary_stats <- lhs_results %>%
+  summarise(
+    biomass_mean = mean(total_biomass_Mg_per_ha, na.rm = TRUE),
+    biomass_sd = sd(total_biomass_Mg_per_ha, na.rm = TRUE),
+    biomass_median = median(total_biomass_Mg_per_ha, na.rm = TRUE),
+    biomass_IQR_lower = quantile(total_biomass_Mg_per_ha, 0.25, na.rm = TRUE),
+    biomass_IQR_upper = quantile(total_biomass_Mg_per_ha, 0.75, na.rm = TRUE),
+    
+    cover_mean = mean(canopy_cover_pct, na.rm = TRUE),
+    cover_sd = sd(canopy_cover_pct, na.rm = TRUE),
+    cover_median = median(canopy_cover_pct, na.rm = TRUE),
+    cover_IQR_lower = quantile(canopy_cover_pct, 0.25, na.rm = TRUE),
+    cover_IQR_upper = quantile(canopy_cover_pct, 0.75, na.rm = TRUE),
+    
+    treecount_mean = mean(total_individuals, na.rm = TRUE),
+    treecount_sd = sd(total_individuals, na.rm = TRUE),
+    treecount_median = median(total_individuals, na.rm = TRUE),
+    treecount_IQR_lower = quantile(total_individuals, 0.25, na.rm = TRUE),
+    treecount_IQR_upper = quantile(total_individuals, 0.75, na.rm = TRUE)
+  )
+
+
+metrics_df <- lhs_results %>% select(total_biomass_Mg_per_ha, canopy_cover_pct, total_individuals)
+
+metrics_long <- metrics_df %>%
+  pivot_longer(cols = everything(), names_to = "metric", values_to = "value")
+
+# Descriptive labels for metrics
+metric_labels <- c(
+  total_biomass_Mg_per_ha = "Total Biomass (Mg/ha)",
+  canopy_cover_pct = "Canopy Cover (%)",
+  total_individuals = "Number of Trees"
+)
+
+# Compute median and IQR for each metric
+summary_stats <- metrics_long %>%
+  group_by(metric) %>%
+  summarise(
+    median_val = median(value, na.rm = TRUE),
+    IQR_lower = quantile(value, 0.25, na.rm = TRUE),
+    IQR_upper = quantile(value, 0.75, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    label = paste0("Median = ", round(median_val,2), 
+                   "\nIQR = [", round(IQR_lower,2), ", ", round(IQR_upper,2), "]")
+  )
+
+ggplot(metrics_long, aes(x = value)) +
+  geom_histogram(aes(y = ..density..), bins = 30, fill = "skyblue", alpha = 0.6) +
+  geom_density(color = "darkblue", size = 1) +
+  facet_wrap(~ metric, scales = "free", 
+             labeller = as_labeller(metric_labels), 
+             strip.position = "bottom") +
+  theme_minimal() +
+  theme(
+    strip.background = element_blank(),
+    strip.placement = "outside",
+    strip.text = element_text(size = 14), 
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12.5)
+  ) +
+  labs(
+    title = "",
+    x = "",
+    y = "Density"
+  ) +
+  geom_text(
+    data = summary_stats,
+    aes(
+      x = Inf, y = Inf, label = label
+    ),
+    inherit.aes = FALSE,
+    hjust = 1.1, vjust = 1.1,
+    size = 4
+  )
+
+
+```
+We compared three metrics derived from delineated canopies and from field observations. Manual delineations overpredicted biomass by 64%, overpredicted canopy cover by 21%, and underpredicted tree count by 30% relative to field observations. The automated model performed similarly, overpredicting biomass by 40%, overpredicting canopy cover by 20%, and underpredicting tree count by 35%. The automated and manually delineated estimates aligned closely, but deviated noticeably from field totals.
+```{r}
+#| fig-align: center
+#| fig-width: 8
+#| fig-height: 3
+library(terra)
+library(dplyr)
+library(tidyr)
+library(gt)
+
+# ---------------------------
+# 0. Load top parameters (for auto-detection)
+# ---------------------------
+results_df <- readRDS("../Data/lhs_parameterization_3000results_withdlnorm.rds")
+
+opt_params <- results_df %>%
+  filter(median_diff < 5,
+         overlap > 0.84,
+         count_diff < 50,
+         D < 0.3,
+         p_value < 0.05) %>%
+  arrange(desc(log_likelihood))
+
+topparams <- opt_params[1:300,]
+
+# ---------------------------
+# 1. Load & prepare manual canopy polygons
+# ---------------------------
+canpol <- vect("../Data/GitData/canopypolys.shp")
+survey_outline <- vect("../QGIS/100msurveybuffer.shp")
+canpol_crop <- crop(canpol, survey_outline)
+canpol_crop$area <- expanse(canpol_crop, unit = "m")
+
+canpol_df <- as.data.frame(canpol_crop)
+canpol_df$predicted_biomass <- predict(model, newdata = canpol_df)
+canpol_df$biomass_Mg <- canpol_df$predicted_biomass / 1000
+
+survey_area_m2 <- as.numeric(expanse(survey_outline, unit = "m"))
+
+man_delin <- canpol_df %>%
+  summarise(
+    canopy_cover_pct = (sum(area, na.rm = TRUE) / survey_area_m2) * 100,
+    total_biomass_Mg = sum(biomass_Mg, na.rm = TRUE),
+    total_individuals = n()
+  ) %>%
+  mutate(
+    total_biomass_Mg_per_ha = total_biomass_Mg / (survey_area_m2 / 10000),
+    method = "Manual_Detection"
+  ) %>%
+  select(-total_biomass_Mg)
+
+# ---------------------------
+# 2. Load & prepare field observations
+# ---------------------------
+veg_dat <- read.csv("../Data/GitData/US-SRG_WoodyPlantCensus_28052025.csv")
+species_list <- c("ACIA", "CHAC", "GTN", "HAC", "MES", "WAC", "WTA", "Salix")
+
+obsdf <- veg_dat %>% filter(Species %in% species_list) %>% select(ID, Species)
+CD_wide <- veg_dat %>%
+  select(ID, CrownDiameter) %>%
+  group_by(ID) %>%
+  mutate(diam_order = row_number()) %>%
+  ungroup() %>%
+  pivot_wider(names_from = diam_order, values_from = CrownDiameter, names_prefix = "Di_") %>%
+  select(ID, Di_1, Di_2)
+
+elp_obs <- merge(obsdf, CD_wide, by = "ID") %>%
+  mutate(canopy_area = pi * (Di_1 / 2) * (Di_2 / 2),
+         predicted_biomass = predict(model, newdata = data.frame(area = canopy_area)))
+
+fieldobs_total <- elp_obs %>%
+  summarise(
+    total_individuals = nrow(elp_obs),
+    total_biomass_Mg_per_ha = (sum(predicted_biomass, na.rm = TRUE)/1000) / (survey_area_m2/10000),
+    canopy_cover_pct = (sum(canopy_area, na.rm = TRUE) / survey_area_m2) * 100,
+    method = "Field_Observations"
+  )
+
+# ---------------------------
+# 3. Prepare auto-detection results
+# ---------------------------
+metrics_long <- topparams %>%
+  select(total_biomass_Mg_per_ha, canopy_cover_pct, total_individuals) %>%
+  pivot_longer(cols = everything(), names_to = "metric", values_to = "value")
+
+auto_results <- metrics_long %>%
+  group_by(metric) %>%
+  summarise(
+    median = median(value, na.rm = TRUE),
+    IQR_lower = quantile(value, 0.25, na.rm = TRUE),
+    IQR_upper = quantile(value, 0.75, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(IQR = paste0(round(IQR_lower, 2), "–", round(IQR_upper, 2)),
+         method = "Auto_Detection") %>%
+  select(method, metric, median, IQR)
+
+# ---------------------------
+# 4. Combine all methods, stacked by metric
+# ---------------------------
+man_field_summary <- rbind(man_delin, fieldobs_total) %>%
+  pivot_longer(cols = -method, names_to = "metric", values_to = "median") %>%
+  mutate(IQR = NA_character_)
+
+summary_all_long <- bind_rows(man_field_summary, auto_results) %>%
+  mutate(
+    method = factor(method, levels = c("Field_Observations", "Manual_Detection", "Auto_Detection")),
+    Metric = case_when(
+      metric == "total_biomass_Mg_per_ha" ~ "Total Biomass (Mg/ha)",
+      metric == "canopy_cover_pct" ~ "Canopy Cover (%)",
+      metric == "total_individuals" ~ "Number of Trees"
+    )
+  ) %>%
+  select(Metric, Method = method, Median = median, IQR)
+
+# ---------------------------
+# 5. Create GT table
+# ---------------------------
+gt_table <- summary_all_long %>%
+  gt() %>%
+  tab_header(title = "Comparison of Canopy Metrics Across Methods") %>%
+  fmt_number(columns = c(Median), decimals = 2) %>%
+  cols_label(Median = "Median", IQR = "IQR (25–75%)") %>%
+  tab_style(style = cell_text(weight = "bold"), locations = cells_column_labels(everything()))
+
+gt_table
+
+
+```
+We also selected the parameter set with the highest log-likelihood value from the top 300 parameter sets to characterize canopies at the site and to compare results to the manual delineations and field observations. This set of parameters slightly underestimates larger canopies (blue), but detects more clumps of smaller canopies. 
+```{r}
+#| fig-align: center
+#| fig-width: 6
+#| fig-height: 4
+# Load data
+library(terra)
+
+# Load data
+manu <- vect("../Data/GitData/canopypolys.shp")
+auto_new <- vect("../Data/topparams_08142025report.shp")
+
+# Compute differences
+overpred <- erase(auto_new, manu)   # auto_new minus manual
+underpred <- erase(manu, auto_new)  # manual minus auto_new
+
+# Plot differences only
+plot(overpred, col="red", border=NA, main="Canopy Prediction Differences", axes=FALSE)
+plot(underpred, col="blue", border=NA, add=TRUE)
+
+```
+We compare distributions of canopy area and height for the field observations, manually delineated canopies, and automatically delineated canopies (using the top parameter set). Field observations contained a higher proportion of small canopy areas compared to the delineated canopy datasets. Additionally, the height distribution from the observed data was more uniform, exhibiting a more gradual incline compared to the steeper distribution observed in the delineated canopies.
+```{r}
+#| fig-align: center
+#| fig-width: 8
+#| fig-height: 5
+
+library(terra)
+library(sf)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(viridis)
+library(lidR)   # for locate_trees
+
+#-----------------------------
+# Load CHM
+#-----------------------------
+chm <- rast("../Data/GitData/SRGchm.RDS")  # your CHM raster
+
+#-----------------------------
+# Detect treetops and extract height
+#-----------------------------
+ttops <- locate_trees(
+  chm,
+  algorithm = lmf(ws = 3, hmin = 1)
+)
+
+ttops_sf <- st_as_sf(ttops)
+ttops_sf$height <- terra::extract(chm, vect(ttops_sf))[,2]
+
+#-----------------------------
+# Load auto-delineated polygons
+#-----------------------------
+auto_polygons <- st_read("../Data/topparams_08142025report.shp", quiet = TRUE)
+auto_polygons$area <- as.numeric(st_area(auto_polygons))
+
+# Assign nearest treetop height to each polygon
+auto_centroids <- st_centroid(auto_polygons)
+nearest_ttops <- st_nearest_feature(auto_centroids, ttops_sf)
+auto_polygons$height <- ttops_sf$height[nearest_ttops]
+
+auto_df <- data.frame(
+  CanopyArea = auto_polygons$area,
+  Height     = auto_polygons$height,
+  Method     = "Auto"
+)
+
+#-----------------------------
+# Manual polygons
+#-----------------------------
+canpol <- vect("../Data/GitData/canopypolys.shp")
+
+chm_crop <- crop(chm, canpol)
+chm_masked <- mask(chm_crop, canpol)
+
+max_height <- terra::extract(chm_masked, canpol, fun = max, na.rm = TRUE)
+height_values <- max_height[,2]  # second column usually contains CHM values
+
+areas <- expanse(canpol, unit = "m")
+
+manual_df <- data.frame(
+  CanopyArea = areas,
+  Height     = height_values,
+  Method     = "Manual"
+)
+
+#-----------------------------
+# Field observations
+#-----------------------------
+veg_dat <- read.csv("../Data/GitData/US-SRG_WoodyPlantCensus_28052025.csv")
+species_list <- c("ACIA", "CHAC", "GTN", "HAC", "MES", "WAC", "WTA", "Salix")
+
+obsdf <- veg_dat %>%
+  filter(Species %in% species_list) %>%
+  dplyr::select(ID, Height)
+
+CD_wide <- veg_dat %>%
+  dplyr::select(ID, CrownDiameter) %>%
+  group_by(ID) %>%
+  mutate(diam_order = row_number()) %>%
+  ungroup() %>%
+  pivot_wider(names_from = diam_order, values_from = CrownDiameter, names_prefix = "Di_") %>%
+  dplyr::select(ID, Di_1, Di_2)
+
+field_df <- merge(obsdf, CD_wide, by = "ID") %>%
+  reframe(
+    CanopyArea = pi * (Di_1 / 2) * (Di_2 / 2),
+    Height     = Height,
+    Method     = "Field"
+  )
+
+#-----------------------------
+# Combine all datasets
+#-----------------------------
+topparam_combo_df <- bind_rows(auto_df, manual_df, field_df)
+
+metrics_long <- topparam_combo_df %>%
+  pivot_longer(cols = c(Height, CanopyArea),
+               names_to = "Metric",
+               values_to = "Value")
+
+#-----------------------------
+# Plot histogram + density
+#-----------------------------
+ggplot(metrics_long, aes(x = Value, fill = Method)) +
+  geom_histogram(aes(y = ..density..), bins = 30, alpha = 0.5, position = "identity") +
+  geom_density(alpha = 0.6) +
+  facet_wrap(
+    ~ Metric,
+    scales = "free",
+    switch = "x",
+    labeller = labeller(
+      Metric = c(
+        CanopyArea = "Canopy Area (m²)",
+        Height     = "Height (m)"
+      )
+    )
+  ) +
+  scale_fill_viridis_d(option = "plasma") +
+  labs(x = NULL, y = "Density") +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.title.y = element_text(vjust = 1.5),
+    strip.text.x = element_text(size = 14),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 12),
+    strip.placement = "outside"
+  )
+```
+## Canopy Errors
+Due to the substantial differences in trees detected, biomass, and canopy area between the observed and delineated canopies, we investigated sources of error. We attribute the under-performance of the canopy delineations to two types of error:
+-   Detection error: inaccuracies in identifying the presence or absence of a tree.
+-   Segmentation error: inaccuracies in defining individual canopy boundaries, such as merging multiple canopies into one or fragmenting a single canopy into several parts.
+Detection errors primarily affect small trees, since large trees  naturally occupy more area and have denser canopies, making them more likely to be detected. Because small trees are abundant at the site, a model's ability to detect canopies below a certain size threshold can cause substantial variability in the total number of individuals recorded. However, while small-canopied trees contribute largely to tree counts, their contribution to total biomass is minimal until a considerable number of these canopies are left undetected. 
+```{r}
+#| fig-align: center
+#| fig-width: 10
+#| fig-height: 5
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(scales)
+
+#-----------------------------
+# Field observations
+#-----------------------------
+veg_dat <- read.csv("../Data/GitData/US-SRG_WoodyPlantCensus_28052025.csv")
+species_list <- c("ACIA", "CHAC", "GTN", "HAC", "MES", "WAC", "WTA", "Salix")
+
+obsdf <- veg_dat %>%
+  dplyr::select(ID, Species, Height) %>%
+  filter(Species %in% species_list)
+
+CD_df <- veg_dat %>%
+  dplyr::select(ID, CrownDiameter)
+
+CD_wide <- CD_df %>%
+  group_by(ID) %>%
+  mutate(diam_order = row_number()) %>%
+  ungroup() %>%
+  pivot_wider(names_from = diam_order, values_from = CrownDiameter, names_prefix = "Di_") %>%
+  dplyr::select(ID, Di_1, Di_2)
+
+field_paramcomp <- merge(obsdf, CD_wide, by = "ID") %>%
+  reframe(
+    CanopyArea = pi * (Di_1 / 2) * (Di_2 / 2),
+    Height = Height,
+    Method = "Field_Observations"
+  ) %>%
+  mutate(predicted_biomass_Mg = (predict(model, newdata = data.frame(area = CanopyArea)))/1000) %>%
+  arrange(CanopyArea)  # smallest first
+
+#-----------------------------
+# Initialize sensitivity data frame
+#-----------------------------
+n_individuals <- nrow(field_paramcomp)
+biomass_sensitivity <- data.frame(
+  trees_excluded = 0:(n_individuals - 1),
+  trees_remaining = n_individuals:1,
+  total_biomass = NA,
+  min_area_excluded = NA
+)
+
+#-----------------------------
+# Loop to calculate biomass
+#-----------------------------
+for (i in 1:n_individuals) {
+  subset_df <- field_paramcomp %>% slice(i:n_individuals)
+  biomass_sensitivity$total_biomass[i] <- sum(subset_df$predicted_biomass_Mg, na.rm = TRUE)
+  biomass_sensitivity$min_area_excluded[i] <- min(subset_df$CanopyArea, na.rm = TRUE)
+}
+
+#-----------------------------
+# Rescale min_area_excluded for secondary axis
+#-----------------------------
+areas <- biomass_sensitivity$min_area_excluded
+areas <- areas[is.finite(areas)]
+range_biomass <- range(biomass_sensitivity$total_biomass, na.rm = TRUE)
+range_area    <- range(areas)
+
+biomass_sensitivity$min_area_scaled <- scales::rescale(
+  biomass_sensitivity$min_area_excluded,
+  to = range_biomass
+)
+
+#-----------------------------
+# Plot
+#-----------------------------
+p1 <- ggplot(biomass_sensitivity, aes(x = trees_excluded)) +
+  geom_line(aes(y = total_biomass), color = "steelblue", size = 1) +
+  geom_line(aes(y = min_area_scaled), color = "darkgreen", size = 1, linetype = "dashed") +
+  theme_minimal(base_size = 14) +
+  labs(
+    x = "# of Excluded Canopies",
+    y = "Total Biomass (Mg)",
+    title = ""
+  ) +
+  scale_y_continuous(
+    sec.axis = sec_axis(
+      trans = ~ scales::rescale(., to = range_area),
+      name = "Minimum Canopy Area Remaining (m2)",
+      breaks = seq(floor(min(areas)/20)*20, ceiling(max(areas)/20)*20, by = 20)
+    )
+  )
+
+library(dplyr)
+library(ggplot2) 
+
+results_df <- readRDS("../Data/lhs_parameterization_3000results_withdlnorm.rds")
+
+opt_params <- results_df %>%
+  filter(median_diff < 5,
+         overlap > 0.84,
+         count_diff < 50,
+         D < 0.3,
+         p_value < 0.05) %>%
+  arrange(desc(log_likelihood))
+
+topparams <- opt_params[1:300,]
+
+p2 <- ggplot(topparams, aes(x = total_individuals, y = total_biomass_Mg)) +
+  geom_point(size = 3, alpha = 0.8) +
+  theme_minimal(base_size = 14) +
+  labs(
+    x = "Total Individuals",
+    y = "Total Biomass (Mg)",
+    title = ""
+  ) +
+  theme(
+    axis.title = element_text(size = 15),
+    axis.text  = element_text(size = 13),
+    plot.title = element_text(size = 18))
+#+
+  # geom_smooth(method = "lm", se = TRUE, color = "darkred", linetype = "dashed")
+
+p1+p2
+```
+Given the large discrepancy in tree counts between the delineations and field observations, we investigated the role of errors associated with segmentation. We randomly split manually delineated canopies one to four times to match the total number of observed canopies and examined the resulting distribution. Larger trees had a higher probability of being composed of multiple merged canopies. Because the allometric relationship between canopy area and biomass is nonlinear, the accidental merging of multiple canopies produces artificially large canopies that can disproportionately inflate total biomass estimates for the site. Conversely, randomly segmenting canopies to create a distribution more similar to field observations increases tree counts while reducing total biomass.
+```{r}
+#| fig-align: center
+#| fig-width: 10
+#| fig-height: 5
+library(ggplot2)
+library(viridis)
+
+sim_df <- readRDS("../Data/simulatedsplits.RDS")
+manual_df <- readRDS("../Data/LumpingProd_df.RDS")
+#-----------------------------
+# Plot 1: Density of Canopy Areas
+#-----------------------------
+p1 <- ggplot(sim_df, aes(x = CanopyArea, fill = Method)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(
+    values = c(
+      "Manual_Delineation" = viridis::viridis(3)[2],
+      "Simulated_Splits" = viridis::viridis(3)[3],
+      "Field_Observations" = viridis::viridis(3)[1]
+    ),
+    labels = c(
+      "Manual_Delineation" = "Manual",
+      "Simulated_Splits" = "Simulated",
+      "Field_Observations" = "Field"
+    )
+  ) +
+  theme_minimal(base_size = 16) +
+  theme(
+    legend.title = element_blank(),
+    legend.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    plot.title = element_text(size = 18, face = "bold")
+  ) +
+  labs(
+    title = "",
+    x = "Canopy Area (m2)",
+    y = "Density"
+  )
+
+#-----------------------------
+# Plot 2: Probability of lumping
+#-----------------------------
+p2 <- ggplot(manual_df, aes(x = CanopyArea, y = ProbLumped)) +
+  geom_point(color = "darkred") +
+  geom_smooth(method = "loess", se = TRUE, color = "black") +
+  theme_minimal(base_size = 16) +
+  theme(
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    plot.title = element_text(size = 18, face = "bold")
+  ) +
+  labs(
+    title = "",
+    x = "Canopy Area (m2)",
+    y = "Probability of Lumping"
+  )
+
+
+#-----------------------------
+# Combine plots
+#-----------------------------
+p2 + p1
+```
+Although tree presence can be reliably determined in the field, canopy area measurements are more uncertain due to irregular canopy shapes. Standard field practice involves measuring the major and minor axes of the canopy, but these axes can be difficult to accurately and quickly identify from the ground. As a result, measurement error is introduced depending on the angles at which canopy diameters are assessed. Variability in canopy area estimates is associated with both the size and shape of the canopy. 
+
+We used the modeled tree canopy polygons and generated major and minor axis diameter measurements for 18 directions within each polygon. As size increases, so does the error of the directional estimate
+```{r}
+#| fig-align: center
+#| fig-width: 8
+#| fig-height: 5
+
+library(terra)
+library(sf)
+library(dplyr)
+library(purrr)
+library(tidyr)
+library(ggplot2)
+library(patchwork)
+
+tcans <- vect("../Data/topparams_08142025report.shp")
+tcans_sf <- st_as_sf(tcans) # easier for some ops
+tcans_sf$id <- 1:nrow(tcans_sf)
+
+get_diameter <- function(polygon, angle_deg) {
+  cent <- st_centroid(polygon)
+  cx <- st_coordinates(cent)[1]
+  cy <- st_coordinates(cent)[2]
+  
+  angle_rad <- angle_deg * pi / 180
+  dx <- cos(angle_rad)
+  dy <- sin(angle_rad)
+  L <- 1000
+  line_coords <- matrix(c(cx - L*dx, cy - L*dy,
+                          cx + L*dx, cy + L*dy),
+                        ncol=2, byrow=TRUE)
+  line <- st_sfc(st_linestring(line_coords), crs = st_crs(polygon))
+  
+  # Intersection
+  inter <- st_intersection(polygon, line)
+  if (nrow(st_coordinates(inter)) < 2) return(NA)
+  
+  coords <- st_coordinates(inter)[,1:2]
+  dist_matrix <- as.matrix(dist(coords))
+  max_dist <- max(dist_matrix)
+  return(max_dist)
+}
+
+estimate_canopy_areas <- function(polygon, angles) {
+  diameters <- map_dbl(angles, ~ get_diameter(polygon, .x))
+  perp_diameters <- map_dbl(angles, ~ get_diameter(polygon, .x + 90))
+  
+  est_areas <- pi * (diameters/2) * (perp_diameters/2)
+  true_area <- as.numeric(st_area(polygon))
+  return(c(true_area, est_areas))
+}
+
+angles <- seq(0, 85, by = 5)
+
+results <- tcans_sf %>%
+  rowwise() %>%
+  mutate(vals = list(estimate_canopy_areas(geometry, angles))) %>%
+  ungroup()
+
+out_df <- results %>%
+  mutate(vals = map(vals, ~ setNames(.x, c("True_area", paste0("est", 1:18))))) %>%
+  unnest_wider(vals)
+
+#plotting-----------------------------------------------------------------------
+# Pivot out_df to long format
+df_long <- out_df %>%
+  pivot_longer(cols = starts_with("est"), 
+               names_to = "angle_est", 
+               values_to = "area_est") %>%
+  mutate(id = id)
+
+p1 <- ggplot(df_long, aes(x = True_area, y = area_est)) +
+  geom_point(alpha = 0.4, color = "black") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  theme_minimal(base_size = 16) +  # increase base font size
+  labs(
+    x = "True Canopy Area (m2)",
+    y = "Direction-Based Estimated Area (m2)",
+    title = ""
+  ) +
+  theme(
+    axis.title = element_text(size = 15),   # axis titles larger
+    axis.text = element_text(size = 13),    # axis tick labels larger
+    plot.title = element_text(size = 20)    # if you add a title
+  )
+df_summary <- df_long %>%
+  group_by(id, True_area) %>%
+  summarise(mean_est = mean(area_est, na.rm = TRUE),
+            sd_est = sd(area_est, na.rm = TRUE),
+            .groups = "drop")
+
+# Fit a model of SD as a function of canopy area (log-log is common for variance modeling)
+sd_model <- lm(sd_est ~ True_area, data = df_summary)
+
+# Create prediction data
+pred_df <- data.frame(True_area = seq(min(df_summary$True_area),
+                                      max(df_summary$True_area),
+                                      length.out = 100))
+pred_df$sd_pred <- predict(sd_model, newdata = pred_df)
+
+# Plot
+p2 <- ggplot(df_summary, aes(x = True_area, y = sd_est)) +
+  geom_point(size = 2, color = "black") +
+  geom_line(data = pred_df, aes(y = sd_pred), color = "lightblue", size = 1) +
+  theme_minimal(base_size = 16) +  # increase base font size
+  labs(
+    x = "True Canopy Area (m2)",
+    y = "Standard Deviation of Estimates",
+    title = ""
+  ) +
+  theme(
+    axis.title = element_text(size = 15),   # axis titles larger
+    axis.text  = element_text(size = 13)    # if you add a title
+  )
+
+p1+p2
+```
+Likewise, we used these canopy polygons to assess the error associated with canopies of irregular shapes (i.e., deviation from a smooth ellipse). As the canopy shape deviates from an ellipse, irregularity increases, and error increases. 
+```{r}
+#| fig-align: center
+#| fig-width: 8
+#| fig-height: 5
+#=============================
+# Self-contained Canopy Analysis
+#=============================
+
+library(terra)
+library(sf)
+library(dplyr)
+library(purrr)
+library(tidyr)
+library(ggplot2)
+library(patchwork)
+
+#-----------------------------
+# Load canopy polygons
+#-----------------------------
+tcans <- vect("../Data/topparams_08142025report.shp")
+tcans_sf <- st_as_sf(tcans)
+tcans_sf$id <- 1:nrow(tcans_sf)
+
+#-----------------------------
+# Functions to estimate areas
+#-----------------------------
+get_diameter <- function(polygon, angle_deg) {
+  cent <- st_centroid(polygon)
+  cx <- st_coordinates(cent)[1]
+  cy <- st_coordinates(cent)[2]
+  
+  angle_rad <- angle_deg * pi / 180
+  dx <- cos(angle_rad)
+  dy <- sin(angle_rad)
+  L <- 1000
+  line_coords <- matrix(c(cx - L*dx, cy - L*dy,
+                          cx + L*dx, cy + L*dy),
+                        ncol=2, byrow=TRUE)
+  line <- st_sfc(st_linestring(line_coords), crs = st_crs(polygon))
+  
+  inter <- st_intersection(polygon, line)
+  if (nrow(st_coordinates(inter)) < 2) return(NA)
+  
+  coords <- st_coordinates(inter)[,1:2]
+  dist_matrix <- as.matrix(dist(coords))
+  max(dist_matrix)
+}
+
+estimate_canopy_areas <- function(polygon, angles) {
+  diameters <- map_dbl(angles, ~ get_diameter(polygon, .x))
+  perp_diameters <- map_dbl(angles, ~ get_diameter(polygon, .x + 90))
+  est_areas <- pi * (diameters/2) * (perp_diameters/2)
+  true_area <- as.numeric(st_area(polygon))
+  c(True_area = true_area, est_areas)
+}
+
+angles <- seq(0, 85, by = 5)
+
+#-----------------------------
+# Compute estimated areas
+#-----------------------------
+results <- tcans_sf %>%
+  rowwise() %>%
+  mutate(vals = list(estimate_canopy_areas(geometry, angles))) %>%
+  ungroup() %>%
+  mutate(vals = map(vals, ~ setNames(.x, c("True_area", paste0("est", 1:(length(.x)-1)))))) %>%
+  unnest_wider(vals)
+#-----------------------------
+# Pivot to long format for SD calculation
+#-----------------------------
+df_long <- results %>%
+  pivot_longer(cols = starts_with("est"),
+               names_to = "angle_est",
+               values_to = "area_est") %>%
+  filter(!is.na(area_est))
+
+df_summary <- df_long %>%
+  group_by(id, True_area) %>%
+  summarise(mean_est = mean(area_est, na.rm = TRUE),
+            sd_est   = sd(area_est, na.rm = TRUE),
+            .groups = "drop")
+
+#-----------------------------
+# Compute canopy irregularity
+#-----------------------------
+area_m2 <- expanse(tcans)
+perim_m <- perim(tcans)
+
+get_width_height <- function(polygon) {
+  e <- ext(polygon)
+  width <- e$xmax - e$xmin
+  height <- e$ymax - e$ymin
+  c(width = width, height = height)
+}
+
+wh <- t(sapply(1:length(tcans), function(i) get_width_height(tcans[i])))
+colnames(wh) <- c("width", "height")
+
+a <- wh[, "width"]/2
+b <- wh[, "height"]/2
+
+ellipse_perimeter <- function(a, b) {
+  pi * (3*(a+b) - sqrt((3*a + b)*(a + 3*b)))
+}
+
+ellipse_area <- pi * a * b
+scale_factor <- sqrt(area_m2 / ellipse_area)
+a_scaled <- a * scale_factor
+b_scaled <- b * scale_factor
+ellipse_perim <- ellipse_perimeter(a_scaled, b_scaled)
+
+irregularity_index <- perim_m / ellipse_perim
+
+irreg_results <- data.frame(
+  id = 1:length(tcans),
+  area_m2 = area_m2,
+  perim_m = perim_m,
+  ellipse_perim = ellipse_perim,
+  irregularity_index = irregularity_index
+)
+
+#-----------------------------
+# Merge SD with irregularity
+#-----------------------------
+df_plot <- df_summary %>%
+  left_join(irreg_results, by = "id")
+
+#-----------------------------
+# Plot 1: Irregularity vs SD
+#-----------------------------
+p1 <- ggplot(df_plot, aes(x = irregularity_index, y = sd_est)) +
+  geom_point(size = 2, color = "black") +
+  theme_minimal(base_size = 16) +
+  labs(x = "Canopy Irregularity Index",
+       y = "Standard Deviation of Estimates") +
+  theme(axis.title = element_text(size = 15),
+        axis.text  = element_text(size = 13))
+
+#-----------------------------
+# Plot 2: True area vs Irregularity
+#-----------------------------
+p2 <- ggplot(df_plot, aes(x = area_m2, y = irregularity_index)) +
+  geom_point(size = 2, color = "black") +
+  theme_minimal(base_size = 16) +
+  labs(x = "True Canopy Area (m²)",
+       y = "Canopy Irregularity Index") +
+  theme(axis.title = element_text(size = 15),
+        axis.text  = element_text(size = 13))
+
+#-----------------------------
+# Combine plots
+#-----------------------------
+p1 + p2
+```
+
+# Update 8/1/2025
+
+## Overview
 
 Recent field surveys and drone flights at the US-SRG flux site enabled an exploration of woody biomass estimation methods at fine and coarse spatial scales. In this report, we estimated woody biomass using three approaches:
 
@@ -376,7 +1374,7 @@ survey_outline <- vect("../QGIS/100msurveybuffer.shp")
 manu_polys <- crop(manu_polys, survey_outline)
 auto_polys <- crop(auto_polys, survey_outline)
 
-corrected_coords <- project(corrected_coords, crs(manu_polys))
+corrected_coords <- project(corrected_coords, "EPSG:32612")
 
 if (!("polyID" %in% names(manu_polys)) || all(is.na(manu_polys$polyID))) {
   manu_polys$polyID <- 1:nrow(manu_polys)
